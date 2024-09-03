@@ -1,5 +1,6 @@
 import pandas as pd
 from pandas.core.frame import DataFrame
+from pandas import Series
 
 
 class ELTPipline():
@@ -18,21 +19,20 @@ class ELTPipline():
         if df.duplicated().values.any():
             df.drop_duplicates(inplace=True)
 
-        def outliers(self, df: DataFrame, column: str) -> DataFrame:
 
-            Q1 = df[column].quantile(0.25)
-            Q3 = df[column].quantile(0.75)
-            IQR = Q3 - Q1
-            lower_bound = Q1 - 1.5 * IQR
-            upper_bound = Q3 + 1.5 * IQR
-            outliers = df[(df[column] < lower_bound) | (df[column] > upper_bound)]
-            return outliers
-        
-        
-        for column in df.columns:
-            df.drop(df[df[outliers(df, column)] == True].index, inplace=True)
+    def outliers(df: DataFrame, column: str) -> DataFrame:
 
-        return df
+        Q1 = df[column].quantile(0.25)
+        Q3 = df[column].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        outliers = df[(df[column] < lower_bound) | (df[column] > upper_bound)]
+        df.drop(df[df[outliers(df, column)] == True].index, inplace=True)
+    
+    def data_format(self, data: Series) -> Series:
+
+        return pd.to_datetime(data, format = '%d.%m.%Y')
             
 
 
