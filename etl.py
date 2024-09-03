@@ -20,14 +20,14 @@ class ELTPipline():
             df.drop_duplicates(inplace=True)
 
 
-    def outliers_detection(self, df: DataFrame, group: str, val: str) -> Series:
+    def outliers(self, df: DataFrame, group: str, val: str) -> DataFrame:
 
         qs = df.groupby(group)[val].quantile([0.25,0.75])
         qs = qs.unstack().reset_index()
         qs.columns = [f'{group}', "q1", "q3"]
         df_m = pd.merge(df, qs, on=f'{group}', how="left")
         df_m["Outlier"] = ~ df_m[val].between(df_m["q1"], df_m["q3"])
-        return df_m.groupby(group)["Outlier"].sum().astype(int)
+        return df_m[df_m['Outlier'] == False].drop(['q1', 'q3', 'Outlier'], axis = 1)
         
         
     
