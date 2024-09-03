@@ -40,6 +40,5 @@ class ELTPipline():
         
     def load(self, df: DataFrame, save_path: str):
 
-        df.to_csv(save_path, index = False)
-
+    
         return df.to_csv(save_path, index = False)
