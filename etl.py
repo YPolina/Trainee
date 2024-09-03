@@ -30,18 +30,16 @@ class ELTPipline():
         return df_m[df_m['Outlier'] == False].drop(['q1', 'q3', 'Outlier'], axis = 1)
         
         
-    
     def data_format(self, data: Series) -> Series:
 
         return pd.to_datetime(data, format = '%d.%m.%Y')
             
-    def merge(self):
-        return df
+    def merge_(self, df1: DataFrame, df2: DataFrame, on: str) -> DataFrame:
+        
+        return pd.merge(df2, df1, on=on, how="outer", validate="one_to_many")
+        
+    def load(self, df: DataFrame, save_path: str):
 
-'''
-def load(self, df: DataFrame, save_path: str):
+        df.to_csv(save_path, index = False)
 
-    df.to_csv(save_path, index = False)
-
-    return 
-'''
+        return df.to_csv(save_path, index = False)
