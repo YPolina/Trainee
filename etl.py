@@ -20,21 +20,23 @@ class ELTPipline():
             df.drop_duplicates(inplace=True)
 
 
-    def outliers(df: DataFrame, column: str) -> DataFrame:
+    def outliers_detection(self, df: DataFrame, group: str, val: str) -> Series:
 
-        Q1 = df[column].quantile(0.25)
-        Q3 = df[column].quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        outliers = df[(df[column] < lower_bound) | (df[column] > upper_bound)]
-        df.drop(df[df[outliers(df, column)] == True].index, inplace=True)
+        qs = df.groupby(group)[val].quantile([0.25,0.75])
+        qs = qs.unstack().reset_index()
+        qs.columns = [f'{group}', "q1", "q3"]
+        df_m = pd.merge(df, qs, on=f'{group}', how="left")
+        df_m["Outlier"] = ~ df_m[val].between(df_m["q1"], df_m["q3"])
+        return df_m.groupby(group)["Outlier"].sum().astype(int)
+        
+        
     
     def data_format(self, data: Series) -> Series:
 
         return pd.to_datetime(data, format = '%d.%m.%Y')
             
-
+    def merge(self):
+        return df
 
 '''
 def load(self, df: DataFrame, save_path: str):
