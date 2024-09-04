@@ -1,2 +1,4 @@
 test.csv
 train.csv
+venv
+__pycache__
