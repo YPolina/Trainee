@@ -36,7 +36,7 @@ class ELTPipline():
             
     def merge_(self, df1: DataFrame, df2: DataFrame, on: str) -> DataFrame:
         
-        return pd.merge(df2, df1, on=on, how="outer", validate="one_to_many")
+        return pd.merge(df1, df2, on=on, how="left")
         
     def load(self, df: DataFrame, save_path: str):
 
