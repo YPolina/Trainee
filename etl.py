@@ -21,7 +21,7 @@ class ELTPipline():
 
 
     def outliers(self, df: DataFrame, group: str, val: str) -> DataFrame:
-
+        
         qs = df.groupby(group)[val].quantile([0.25,0.75])
         qs = qs.unstack().reset_index()
         qs.columns = [f'{group}', "q1", "q3"]
