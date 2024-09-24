@@ -1,3 +1,8 @@
 total_data.csv
 venv/
 __pycache__/
+data.csv
+item_categories.csv
+items.csv
+shops.csv
+train.csv
