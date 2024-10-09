@@ -15,7 +15,7 @@ def exctract(dir):
     return list(map(lambda path: pd.read_csv(f'{dir}/{path}'), file_paths))
 
 #outlier detection in DQC stage using boxplot
-def visual_outlierdetection(df, feature):
+def boxplot(df, feature):
     plt.figure(figsize = (10,6))
 
     sns.boxplot(x = df[feature], color='blue')
@@ -127,45 +127,28 @@ def distribution_plot(data, x):
     plt.show()
 
 
-#normal destribution hypothesis
-def kolmogorov_test(df, series):
-    stat, p_value = kstest(df[df.date_block_num < 34][series], 'norm')
-    print(f"Kolmogorov-Smirnov Test: Statistic = {stat}, p-value = {p_value:.3f}")
-
-    if p_value < 0.05:
-        print(f'{series} do not have normal destribution. Ho hypothesis accepted')
-    else:
-        print(f'{series} distribution is normal. Ho hypothesis rejected')
-        
 
 
 #Outlier detection in EDA (using quantile and IQR)
-def outlier_detection_eda(data, feature):
-
-    data = data[data.date_block_num < 34]
-    q1 = data[feature].quantile(0.25)
-    q3 = data[feature].quantile(0.75)
-    IQR = q3 - q1
-    lower_bound = q1 - 1.5 * IQR
-    upper_bound = q3 + 1.5 * IQR
-
-    outliers = data[(data[feature] < lower_bound) | (data[feature] > upper_bound)]
+def outlier_detection_skewed(data, feature, boarder):
+    
 
     return outliers
 
 #Outliers specification
 #feature_sel - features, by which outliers where detected
-def outliers_spec(outliers, feature_sel, border, df_cat, df_items):
+def outliers_spec(outliers, feature_sel, df_cat, df_items):
     outliers_spec = {}
-    for it_id in outliers[outliers[feature_sel] > border].item_id.unique():
+    for it_id in outliers.item_id.unique():
         category_name = df_cat[df_cat.item_category_id == df_items[df_items.item_id == it_id].item_category_id.values[0]].item_category_name.values[0]
         item_name = df_items[df_items.item_id == it_id].item_name.values[0]
-        sales = outliers[(outliers.item_id == it_id) & (outliers[feature_sel] > border)][['date_block_num', feature_sel]]
+        sales = outliers[(outliers.item_id == it_id)][['date_block_num', feature_sel]]
         outliers_spec[category_name] = [item_name, sales]
 
     for key, values in outliers_spec.items():
         print(f'Категория: {key}')
-        print(f'{feature_sel}:\n{values}\n')
+        for val in values:
+            print(val)
 
 #using spearman correlation for two numerical features
 def correlation_table(numerical):
