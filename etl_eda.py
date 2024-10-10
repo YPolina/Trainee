@@ -14,14 +14,14 @@ def exctract(dir):
     file_paths = os.listdir(dir)
     return list(map(lambda path: pd.read_csv(f'{dir}/{path}'), file_paths))
 
-#outlier detection in DQC stage using boxplot
+#Distribution using boxplot
 def boxplot(df, feature):
     plt.figure(figsize = (10,6))
 
     sns.boxplot(x = df[feature], color='blue')
 
     plt.xlabel(f"{feature}")
-    plt.title(f'Outlier detection in {feature}')
+    plt.title(f'Distribution of {feature}')
 
     plt.show()
 
