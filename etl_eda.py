@@ -129,12 +129,6 @@ def distribution_plot(data, x):
 
 
 
-#Outlier detection in EDA (using quantile and IQR)
-def outlier_detection_skewed(data, feature, boarder):
-    
-
-    return outliers
-
 #Outliers specification
 #feature_sel - features, by which outliers where detected
 def outliers_spec(outliers, feature_sel, df_cat, df_items):
