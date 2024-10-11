@@ -115,15 +115,34 @@ def load(filename):
 
 #EDA
 
-def distribution_plot(data, x):
+#Distribution
+def distribution(df, feature):
+    p1 = df[feature].quantile(0.01)
+    p99 = df[feature].quantile(0.99)
 
-    data = data[data.date_block_num < 34]
+    lower_set = df[df[feature] <= p1]
+    middle_set = df[(df[feature] > p1) & (df[feature] < p99)]
+    upper_set = df[df[feature] > p99]
 
-    plt.figure(figsize = (10,6))
+    fig, axes = plt.subplots(1, 4, figsize = (15,4))
 
-    sns.displot(data, x=x,  color='lightgreen', kind = 'kde')
-    plt.title(f'{x} distribution')
-    plt.xlabel(f'{x}')
+    axes[0].hist(x = df[feature], edgecolor='black', linewidth=1.2, color = 'b')
+    axes[0].set_title(f'Distribution of Item_cnt_month')
+
+    axes[1].hist(x = lower_set[feature], edgecolor='black', linewidth=1.2, color = 'b')
+    axes[1].set_title(f'Lower {p1}')
+
+    axes[2].hist(x = middle_set[feature], edgecolor='black', linewidth=1.2, color = 'b')
+    axes[2].set_title(f'Between {p1} and {p99}')
+
+    axes[3].hist(x = upper_set[feature], edgecolor='black', linewidth=1.2, color = 'b')
+    axes[3].set_title(f'Higher {p99}')
+
+    for ax in axes:
+        ax.set_ylabel('Frequency')
+        ax.set_xlabel(f'{feature}')
+
+    plt.tight_layout()
     plt.show()
 
 
