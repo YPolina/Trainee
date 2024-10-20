@@ -55,36 +55,133 @@ class FullDataframeCreation(BaseEstimator, TransformerMixin):
         full_data.sort_values(by = columns, inplace = True)
         
         X = pd.merge(full_data, X, on = columns, how = 'left')
+
+        X = X.fillna(0)
         
         #Merging all combinations with original dataset
+        return X
+
+
+#Feature engineering
+class FeatureEngineering_fulldata(BaseEstimator, TransformerMixin):
+
+    def __init__(self, target_col = 'item_cnt_month', item_price = 'item_price'):
+        self.target_col = target_col
+        self.item_price = item_price
+
+    def fit(self, X, y = None):
+        return self
+    
+    def transform(self, X):
+
+        #date_item_avg_item_cnt - mean sales per item per period block
+        group = X.groupby(['date_block_num', 'item_id']).agg({'item_cnt_month': ['mean']})
+        group.columns = [ 'date_item_avg_item_cnt']
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['date_block_num','item_id'], how='left')
+        X['date_item_avg_item_cnt'] = X['date_item_avg_item_cnt'].astype(np.float16)
+
+        #date_shop_avg_item_cnt - mean sales per shop per period block
+        group = X.groupby(['date_block_num', 'shop_id']).agg({'item_cnt_month': ['mean']})
+        group.columns = [ 'date_shop_avg_item_cnt' ]
+        group.reset_index(inplace=True)
+
+        X = pd.merge(X, group, on=['date_block_num','shop_id'], how='left')
+        X['date_shop_avg_item_cnt'] = X['date_shop_avg_item_cnt'].astype(np.float16)
+       
+
+        #date_shop_cat_avg_item_cnt - average sales per date_block, shop and category
+        group = X.groupby(['date_block_num', 'shop_id', 'item_category_id']).agg({'item_cnt_month': ['mean']})
+        group.columns = ['date_shop_cat_avg_item_cnt']
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['date_block_num', 'shop_id', 'item_category_id'], how='left')
+        X['date_shop_cat_avg_item_cnt'] = X['date_shop_cat_avg_item_cnt'].astype(np.float16)
+
+        #Average sales per category per date_block_num
+        group = X.groupby(['date_block_num', 'item_category_id']).agg({'item_cnt_month': ['mean']})
+        group.columns = [ 'date_cat_avg_item_cnt' ]
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['date_block_num','item_category_id'], how='left')
+        X['date_cat_avg_item_cnt'] = X['date_cat_avg_item_cnt'].astype(np.float16)
+
+        #Average sales per minor_category per date_block_num
+        group = X.groupby(['date_block_num', 'minor_category_id']).agg({'item_cnt_month': ['mean']})
+        group.columns = [ 'date_minor_cat_avg_item_cnt' ]
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['date_block_num','minor_category_id'], how='left')
+        X['date_minor_cat_avg_item_cnt'] = X['date_minor_cat_avg_item_cnt'].astype(np.float16)
+
+        #Average sales per main_category per date_block_num
+        group = X.groupby(['date_block_num', 'main_category_id']).agg({'item_cnt_month': ['mean']})
+        group.columns = [ 'date_main_cat_avg_item_cnt' ]
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['date_block_num','main_category_id'], how='left')
+        X['date_main_cat_avg_item_cnt'] = X['date_main_cat_avg_item_cnt'].astype(np.float16)
+
+        #Average sales per date block per city
+        group = X.groupby(['date_block_num', 'city_id']).agg({'item_cnt_month': ['mean']})
+        group.columns = [ 'date_city_avg_item_cnt' ]
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['date_block_num', 'city_id'], how='left')
+        X['date_city_avg_item_cnt'] = X['date_city_avg_item_cnt'].astype(np.float16)
+
+        #Average price per item per date_block
+        group = X.groupby(['date_block_num','item_id']).agg({'item_price': ['mean']})
+        group.columns = ['date_item_avg_item_price']
+        group.reset_index(inplace=True)
+
+        X = pd.merge(X, group, on=['date_block_num','item_id'], how='left')
+        X['date_item_avg_item_price'] = X['date_item_avg_item_price'].astype(np.float16)
+
+
+        #Impact of each shop to the overall revenue
+        group = X.groupby(['date_block_num','shop_id']).agg({'revenue': ['sum']})
+        group.columns = ['date_shop_revenue']
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['date_block_num','shop_id'], how='left')
+        X['date_shop_revenue'] = X['date_shop_revenue'].astype(np.float32)
+
+        group = group.groupby(['shop_id']).agg({'date_shop_revenue': ['mean']})
+        group.columns = ['shop_avg_revenue']
+        group.reset_index(inplace=True)
+        X = pd.merge(X, group, on=['shop_id'], how='left')
+        X['shop_avg_revenue'] = X['shop_avg_revenue'].astype(np.float32)
+
+        X['delta_revenue'] = (X['date_shop_revenue'] - X['shop_avg_revenue']) / X['shop_avg_revenue']
+        X['delta_revenue'] = X['delta_revenue'].astype(np.float16)
+
+
         return X
 
 
 #Lag features for target column
 class LagFeatureGenerator(BaseEstimator, TransformerMixin):
 
-    def __init__(self, target_col = 'item_cnt_month', group_cols = ['date_block_num', 'shop_id', 'item_id'], lags = [1,2,3,6,12]):
-        self.lags = lags
-        self.group_cols = group_cols
-        self.target_col = target_col
+    def __init__(self, col_lags_dict):
+        self.col_lags_dict = col_lags_dict
 
     def fit(self, X, y = None):
         return self
 
     def transform(self, X):
         
-        
-        for lag in self.lags:
-            X[f'{self.target_col}_lag_{lag}'] = X.groupby(self.group_cols)[self.target_col].shift(lag)
-        X = X.fillna(0)
+        for column, lags in self.col_lags_dict.items():
+            tmp = X[['date_block_num','shop_id','item_id', column]]
+            for lag in lags:
+                shifted = tmp.copy()
+                shifted.columns = ['date_block_num','shop_id','item_id', column+'_lag_'+str(lag)]
+                shifted['date_block_num'] += lag
+                X = pd.merge(X, shifted, on=['date_block_num','shop_id','item_id'], how='left')
         return X
 
-def pipeline_1(date_block_num, lags):
+#Pipeline for featureengineering, lag features, obtaining full data with all shop&item pairs
+def pipeline_1(date_block_num, col_lags_dict):
 
     pipeline_1 = Pipeline(steps = [
         ('feature engineering', FeatureEngineering()),
         ('full set', FullDataframeCreation(date_block_num)),
-        ('lag features', LagFeatureGenerator(lags = lags))
+        ('feature engineering full_data', FeatureEngineering_fulldata()),
+        ('lag features', LagFeatureGenerator(col_lags_dict = col_lags_dict))
     ])
 
 
@@ -92,19 +189,19 @@ def pipeline_1(date_block_num, lags):
     return pipeline_1
 
 
+
 #Log Transformations
 class LogTransformer(BaseEstimator, TransformerMixin):
 
-    def __init__(self, columns):
-        self.columns = columns
+    def __init__(self, target_column):
+        self.target_column = target_column
     
     def fit(self, X, y = None):
         return self
 
     def transform(self, X):
         
-        for col in self.columns:
-            X[col] = np.log1p(X[col])
+        X[self.target_column] = np.log1p(X[self.target_column])
         
         return X
 
@@ -141,21 +238,21 @@ class MulticolumnsLabelEncoding(BaseEstimator, TransformerMixin):
         return X
 
 
-#All steps
-def pipeline_2(log_transform_cols, categorical_columns):
+#Pipeline for target-log-transformation ans categorical encoding
+def pipeline_2(target_log, categorical_columns):
 
     categorical_transformer = Pipeline(steps = [
         ('encoding', MulticolumnsLabelEncoding(columns=categorical_columns))
     ])
 
     log_transformer = Pipeline(steps = [
-        ('log_transform', LogTransformer(columns = log_transform_cols))
+        ('log_transform', LogTransformer(target_column = target_log))
     ])
 
 
     preprocessor = ColumnTransformer(
         transformers = [
-            ('log', log_transformer, log_transform_cols),
+            ('log', log_transformer, target_log),
             ('cat', categorical_transformer, categorical_columns)
         ]
     )
