@@ -5,4 +5,5 @@ item_categories.csv
 items.csv
 shops.csv
 train.csv
+full_data.csv
 1.py
