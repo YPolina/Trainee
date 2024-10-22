@@ -23,8 +23,10 @@ class FeatureEngineering():
 
         #Shop history: To track amount of time blocks with data for each shop
         X['shop_history'] = (X.groupby('shop_id')['date_block_num'].transform('nunique'))
+
         #Minor_category_history: To track amount of time blocks with data for each minor_category
         X['minor_category_history'] = (X.groupby('minor_category_id')['date_block_num'].transform('nunique'))
+
 
         return X
 
@@ -79,7 +81,7 @@ class FeatureEngineering_fulldata(BaseEstimator, TransformerMixin):
         group.columns = [ 'date_item_avg_item_cnt']
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['date_block_num','item_id'], how='left')
-        X['date_item_avg_item_cnt'] = X['date_item_avg_item_cnt'].astype(np.float16)
+
 
         #date_shop_avg_item_cnt - mean sales per shop per period block
         group = X.groupby(['date_block_num', 'shop_id']).agg({'item_cnt_month': ['mean']})
@@ -87,7 +89,7 @@ class FeatureEngineering_fulldata(BaseEstimator, TransformerMixin):
         group.reset_index(inplace=True)
 
         X = pd.merge(X, group, on=['date_block_num','shop_id'], how='left')
-        X['date_shop_avg_item_cnt'] = X['date_shop_avg_item_cnt'].astype(np.float16)
+
        
 
         #date_shop_cat_avg_item_cnt - average sales per date_block, shop and category
@@ -95,35 +97,32 @@ class FeatureEngineering_fulldata(BaseEstimator, TransformerMixin):
         group.columns = ['date_shop_cat_avg_item_cnt']
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['date_block_num', 'shop_id', 'item_category_id'], how='left')
-        X['date_shop_cat_avg_item_cnt'] = X['date_shop_cat_avg_item_cnt'].astype(np.float16)
 
         #Average sales per category per date_block_num
         group = X.groupby(['date_block_num', 'item_category_id']).agg({'item_cnt_month': ['mean']})
         group.columns = [ 'date_cat_avg_item_cnt' ]
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['date_block_num','item_category_id'], how='left')
-        X['date_cat_avg_item_cnt'] = X['date_cat_avg_item_cnt'].astype(np.float16)
+
 
         #Average sales per minor_category per date_block_num
         group = X.groupby(['date_block_num', 'minor_category_id']).agg({'item_cnt_month': ['mean']})
         group.columns = [ 'date_minor_cat_avg_item_cnt' ]
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['date_block_num','minor_category_id'], how='left')
-        X['date_minor_cat_avg_item_cnt'] = X['date_minor_cat_avg_item_cnt'].astype(np.float16)
 
         #Average sales per main_category per date_block_num
         group = X.groupby(['date_block_num', 'main_category_id']).agg({'item_cnt_month': ['mean']})
         group.columns = [ 'date_main_cat_avg_item_cnt' ]
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['date_block_num','main_category_id'], how='left')
-        X['date_main_cat_avg_item_cnt'] = X['date_main_cat_avg_item_cnt'].astype(np.float16)
 
         #Average sales per date block per city
         group = X.groupby(['date_block_num', 'city_id']).agg({'item_cnt_month': ['mean']})
         group.columns = [ 'date_city_avg_item_cnt' ]
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['date_block_num', 'city_id'], how='left')
-        X['date_city_avg_item_cnt'] = X['date_city_avg_item_cnt'].astype(np.float16)
+
 
         #Average price per item per date_block
         group = X.groupby(['date_block_num','item_id']).agg({'item_price': ['mean']})
@@ -131,7 +130,7 @@ class FeatureEngineering_fulldata(BaseEstimator, TransformerMixin):
         group.reset_index(inplace=True)
 
         X = pd.merge(X, group, on=['date_block_num','item_id'], how='left')
-        X['date_item_avg_item_price'] = X['date_item_avg_item_price'].astype(np.float16)
+
 
 
         #Impact of each shop to the overall revenue
@@ -139,16 +138,16 @@ class FeatureEngineering_fulldata(BaseEstimator, TransformerMixin):
         group.columns = ['date_shop_revenue']
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['date_block_num','shop_id'], how='left')
-        X['date_shop_revenue'] = X['date_shop_revenue'].astype(np.float32)
+
 
         group = group.groupby(['shop_id']).agg({'date_shop_revenue': ['mean']})
         group.columns = ['shop_avg_revenue']
         group.reset_index(inplace=True)
         X = pd.merge(X, group, on=['shop_id'], how='left')
-        X['shop_avg_revenue'] = X['shop_avg_revenue'].astype(np.float32)
+
 
         X['delta_revenue'] = (X['date_shop_revenue'] - X['shop_avg_revenue']) / X['shop_avg_revenue']
-        X['delta_revenue'] = X['delta_revenue'].astype(np.float16)
+
 
 
         return X
@@ -201,7 +200,7 @@ class LogTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         
-        X[self.target_column] = np.log1p(X[self.target_column])
+        X[self.target_column] = np.round(np.log1p(X[self.target_column]), 2)
         
         return X
 
@@ -264,7 +263,6 @@ def pipeline_2(target_log, categorical_columns):
 
 
     return pipeline_2
-
 
 
 #Validation
