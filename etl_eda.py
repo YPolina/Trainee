@@ -105,7 +105,7 @@ def completeness_check(df1, df2, feature):
 def to_csv(df, filename):
     if os.path.isfile(filename):
         os.remove(filename)
-    return df.to_csv(f'{filename}')
+    return df.to_csv(f'{filename}', index=False)
 
 #Load from csv file
 def load(filename):

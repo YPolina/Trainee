@@ -200,7 +200,7 @@ class LogTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         
-        X[self.target_column] = np.round(np.log1p(X[self.target_column]), 2)
+        X[self.target_column] = np.round(np.log1p(X[self.target_column]), 5)
         
         return X
 
