@@ -7,4 +7,5 @@ shops.csv
 train.csv
 full_data.csv
 submission.csv
+val.ipynb
 1.py
