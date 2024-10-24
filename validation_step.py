@@ -6,8 +6,9 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 
+
 #Feature engineering
-class FeatureEngineering():
+class FeatureEngineering(BaseEstimator, TransformerMixin):
 
     def __init__(self, target_col = 'item_cnt_month', item_price = 'item_price'):
         self.target_col = target_col
@@ -26,55 +27,6 @@ class FeatureEngineering():
 
         #Minor_category_history: To track amount of time blocks with data for each minor_category
         X['minor_category_history'] = (X.groupby('minor_category_id')['date_block_num'].transform('nunique'))
-
-
-        return X
-
-#To ensure that our df has all shop&item combinations
-class FullDataframeCreation(BaseEstimator, TransformerMixin):
-
-    def __init__(self, date_block_num):
-        self.date_block_num = date_block_num
-
-    def fit(self, X, y = None):
-
-        return self
-
-    def transform(self, X):
-
-        #All unique values of existed shops and items
-        full_data_list = []
-        shop_ids = X['shop_id'].unique()
-        item_ids = X['item_id'].unique()
-        
-        #Iterating through unique values to get all shop&item combinations
-        for i in range(self.date_block_num + 1):
-            for shop in shop_ids:
-                for item in item_ids:
-                    full_data_list.append([i, shop, item])
-        columns = ['date_block_num','shop_id','item_id']
-        full_data = pd.DataFrame(full_data_list, columns=columns)
-        full_data.sort_values(by = columns, inplace = True)
-        
-        X = pd.merge(full_data, X, on = columns, how = 'left')
-
-        X = X.fillna(0)
-        
-        #Merging all combinations with original dataset
-        return X
-
-
-#Feature engineering
-class FeatureEngineering_fulldata(BaseEstimator, TransformerMixin):
-
-    def __init__(self, target_col = 'item_cnt_month', item_price = 'item_price'):
-        self.target_col = target_col
-        self.item_price = item_price
-
-    def fit(self, X, y = None):
-        return self
-    
-    def transform(self, X):
 
         #date_item_avg_item_cnt - mean sales per item per period block
         group = X.groupby(['date_block_num', 'item_id']).agg({'item_cnt_month': ['mean']})
@@ -174,12 +126,10 @@ class LagFeatureGenerator(BaseEstimator, TransformerMixin):
         return X
 
 #Pipeline for featureengineering, lag features, obtaining full data with all shop&item pairs
-def pipeline_1(date_block_num, col_lags_dict):
+def pipeline_1(col_lags_dict):
 
     pipeline_1 = Pipeline(steps = [
         ('feature engineering', FeatureEngineering()),
-        ('full set', FullDataframeCreation(date_block_num)),
-        ('feature engineering full_data', FeatureEngineering_fulldata()),
         ('lag features', LagFeatureGenerator(col_lags_dict = col_lags_dict))
     ])
 
