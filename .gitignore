@@ -1,3 +1,4 @@
 *.csv
 venv/
+advanced_modeling.ipynb
 __pycache__/
