@@ -5,10 +5,10 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
+           
 
-
-#Feature engineering Part 1
-class FeatureEngineering_1(BaseEstimator, TransformerMixin):
+#Feature engineering
+class FeatureEngineering(BaseEstimator, TransformerMixin):
 
     def __init__(self, target_col = 'item_cnt_month', item_price = 'item_price'):
         self.target_col = target_col
@@ -24,48 +24,9 @@ class FeatureEngineering_1(BaseEstimator, TransformerMixin):
 
         #Shop history: To track amount of time blocks with data for each shop
         X['shop_history'] = (X.groupby('shop_id')['date_block_num'].transform('nunique'))
-        X['shop_history'] = X['shop_history'].astype(np.int8)
 
         #Minor_category_history: To track amount of time blocks with data for each minor_category
         X['minor_category_history'] = (X.groupby('minor_category_id')['date_block_num'].transform('nunique'))
-        X['minor_category_history'] = X['minor_category_history'].astype(np.int8)
-
-        return X
-
-        #To ensure that our df has all shop&item combinations
-class FullDataframeCreation(BaseEstimator, TransformerMixin):
-
-    def __init__(self, date_block_num):
-        self.date_block_num = date_block_num
-    def fit(self, X, y = None):
-        return self
-    def transform(self, X):
-        #All unique values of existed shops and items
-        full_data_list = []
-        shop_ids = X['shop_id'].unique()
-        item_ids = X['item_id'].unique()
-        
-        #Iterating through unique values to get all shop&item combinations
-        for i in range(self.date_block_num + 1):
-            for shop in shop_ids:
-                for item in item_ids:
-                    full_data_list.append([i, shop, item])
-        columns = ['date_block_num','shop_id','item_id']
-        full_data = pd.DataFrame(full_data_list, columns=columns)
-        full_data.sort_values(by = columns, inplace = True)
-        
-        X = pd.merge(full_data, X, on = columns, how = 'left')
-        
-        #Merging all combinations with original dataset
-        return X
-
-#Feature engineering Part 2
-class FeatureEngineering_2(BaseEstimator, TransformerMixin):
-
-    def fit(self, X, y = None):
-        return self
-    
-    def transform(self, X):
 
         #date_item_avg_item_cnt - mean sales per item per period block
         group = X.groupby(['date_block_num', 'item_id']).agg({'item_cnt_month': ['mean']})
@@ -165,16 +126,12 @@ class LagFeatureGenerator(BaseEstimator, TransformerMixin):
         return X
 
 #Pipeline for featureengineering, lag features, obtaining full data with all shop&item pairs
-def pipeline_1(col_lags_dict, date_block_num):
+def pipeline_1(col_lags_dict):
 
     pipeline_1 = Pipeline(steps = [
-        ('feature engineering_1', FeatureEngineering_1()),
-        ('data_completeness', FullDataframeCreation(date_block_num)),
-        ('feature_engineering_2', FeatureEngineering_2())
+        ('feature engineering', FeatureEngineering()),
         ('lag features', LagFeatureGenerator(col_lags_dict = col_lags_dict))
     ])
-
-
 
     return pipeline_1
 
