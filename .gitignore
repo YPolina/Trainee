@@ -1,11 +1,5 @@
 venv/
 __pycache__/
-data.csv
-item_categories.csv
-items.csv
-shops.csv
-train.csv
-full_data.csv
-submission.csv
+*.csv
 val.ipynb
 1.py
