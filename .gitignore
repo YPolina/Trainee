@@ -1,9 +1,5 @@
 venv/
 __pycache__/
-items.csv
-item_categories.csv
-shops.csv
-train.csv
-data.csv
+*.csv
 experiment.ipynb
 Validation.py
