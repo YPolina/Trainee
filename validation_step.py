@@ -19,6 +19,7 @@ class FeatureEngineering(BaseEstimator, TransformerMixin):
     
     def transform(self, X):
 
+        X = X.copy()
         #Revenue - item_cnt_month * item_price
         X['revenue'] = X[self.target_col] * X[self.item_price]
 
@@ -28,78 +29,53 @@ class FeatureEngineering(BaseEstimator, TransformerMixin):
         #Minor_category_history: To track amount of time blocks with data for each minor_category
         X['minor_category_history'] = (X.groupby('minor_category_id')['date_block_num'].transform('nunique'))
 
-        #date_item_avg_item_cnt - mean sales per item per period block
-        group = X.groupby(['date_block_num', 'item_id']).agg({'item_cnt_month': ['mean']})
-        group.columns = [ 'date_item_avg_item_cnt']
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['date_block_num','item_id'], how='left')
+        grouped_features = []
+        #date_item_avg_item_cnt - mean sales per item per period 
+        group = X.groupby(['date_block_num', 'item_id'])[self.target_col].mean().rename('date_item_avg_item_cnt')
+        grouped_features.append(group)
 
 
         #date_shop_avg_item_cnt - mean sales per shop per period block
-        group = X.groupby(['date_block_num', 'shop_id']).agg({'item_cnt_month': ['mean']})
-        group.columns = [ 'date_shop_avg_item_cnt' ]
-        group.reset_index(inplace=True)
-
-        X = pd.merge(X, group, on=['date_block_num','shop_id'], how='left')
-
-       
+        group = X.groupby(['date_block_num', 'shop_id'])[self.target_col].mean().rename('date_shop_avg_item_cnt')
+        grouped_features.append(group)
+      
 
         #date_shop_cat_avg_item_cnt - average sales per date_block, shop and category
-        group = X.groupby(['date_block_num', 'shop_id', 'item_category_id']).agg({'item_cnt_month': ['mean']})
-        group.columns = ['date_shop_cat_avg_item_cnt']
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['date_block_num', 'shop_id', 'item_category_id'], how='left')
+        group = X.groupby(['date_block_num', 'shop_id', 'item_category_id'])[self.target_col].mean().rename('date_shop_cat_avg_item_cnt')
+        grouped_features.append(group)
 
         #Average sales per category per date_block_num
-        group = X.groupby(['date_block_num', 'item_category_id']).agg({'item_cnt_month': ['mean']})
-        group.columns = [ 'date_cat_avg_item_cnt' ]
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['date_block_num','item_category_id'], how='left')
-
+        group = X.groupby(['date_block_num', 'item_category_id'])[self.target_col].mean().rename('date_cat_avg_item_cnt')
+        grouped_features.append(group)
 
         #Average sales per minor_category per date_block_num
-        group = X.groupby(['date_block_num', 'minor_category_id']).agg({'item_cnt_month': ['mean']})
-        group.columns = [ 'date_minor_cat_avg_item_cnt' ]
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['date_block_num','minor_category_id'], how='left')
+        group = X.groupby(['date_block_num', 'minor_category_id'])[self.target_col].mean().rename('date_minor_cat_avg_item_cnt')
+        grouped_features.append(group)
 
         #Average sales per main_category per date_block_num
-        group = X.groupby(['date_block_num', 'main_category_id']).agg({'item_cnt_month': ['mean']})
-        group.columns = [ 'date_main_cat_avg_item_cnt' ]
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['date_block_num','main_category_id'], how='left')
+        group = X.groupby(['date_block_num', 'main_category_id'])[self.target_col].mean().rename('date_main_cat_avg_item_cnt')
+        grouped_features.append(group)
 
         #Average sales per date block per city
-        group = X.groupby(['date_block_num', 'city_id']).agg({'item_cnt_month': ['mean']})
-        group.columns = [ 'date_city_avg_item_cnt' ]
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['date_block_num', 'city_id'], how='left')
-
+        group = X.groupby(['date_block_num', 'city_id'])[self.target_col].mean().rename('date_city_avg_item_cnt')
+        grouped_features.append(group)
 
         #Average price per item per date_block
-        group = X.groupby(['date_block_num','item_id']).agg({'item_price': ['mean']})
-        group.columns = ['date_item_avg_item_price']
-        group.reset_index(inplace=True)
-
-        X = pd.merge(X, group, on=['date_block_num','item_id'], how='left')
-
+        group = X.groupby(['date_block_num', 'item_id'])[self.item_price].mean().rename('date_item_avg_item_price')
+        grouped_features.append(group)
 
 
         #Impact of each shop to the overall revenue
-        group = X.groupby(['date_block_num','shop_id']).agg({'revenue': ['sum']})
-        group.columns = ['date_shop_revenue']
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['date_block_num','shop_id'], how='left')
+        group = X.groupby(['date_block_num', 'shop_id'])['revenue'].sum().rename('date_shop_revenue')
+        grouped_features.append(group)
 
 
-        group = group.groupby(['shop_id']).agg({'date_shop_revenue': ['mean']})
-        group.columns = ['shop_avg_revenue']
-        group.reset_index(inplace=True)
-        X = pd.merge(X, group, on=['shop_id'], how='left')
+        shop_avg_revenue = X.groupby('shop_id')['revenue'].transform('mean').rename('shop_avg_revenue')
+        X = pd.concat([X, shop_avg_revenue], axis=1)
 
-
+        X = X.join(pd.concat(grouped_features, axis=1), on=['date_block_num', 'shop_id', 'item_id', 'item_category_id', 'minor_category_id', 'main_category_id', 'city_id'])
+        
         X['delta_revenue'] = (X['date_shop_revenue'] - X['shop_avg_revenue']) / X['shop_avg_revenue']
-
 
 
         return X
@@ -116,11 +92,12 @@ class LagFeatureGenerator(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         
+        X = X.copy()
         for column, lags in self.col_lags_dict.items():
             tmp = X[['date_block_num','shop_id','item_id', column]]
             for lag in lags:
                 shifted = tmp.copy()
-                shifted.columns = ['date_block_num','shop_id','item_id', column+'_lag_'+str(lag)]
+                shifted.columns = ['date_block_num','shop_id','item_id', column+'_lag_'+{lag}]
                 shifted['date_block_num'] += lag
                 X = pd.merge(X, shifted, on=['date_block_num','shop_id','item_id'], how='left')
         return X
