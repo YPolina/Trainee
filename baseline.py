@@ -3,6 +3,7 @@ from pandas.core.frame import DataFrame as df
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from typing import TypeVar
+from itertools import product
 
 #To use in annotation for the self parameter of class Validator
 TValidator = TypeVar("TValidator", bound="Validator")
@@ -122,4 +123,22 @@ def reduce_mem_usage(df: df, verbose: bool=True) -> df:
     #To get information about the progress
     if verbose: print('Mem. usage decreased to {:5.2f} Mb ({:.1f}% reduction)'.format(end_mem, 100 * (start_mem - end_mem) / start_mem))
     return df
+
+#Creating df with full range of data
+def full_data_creation(df: df, agg_group: list, periods: int) -> df:
+
+    full_data = []
+
+    #Iteration along all date blocks
+    for i in range(periods):
+        sales = df[df.date_block_num == i]
+        #Adding all possible combinations item_id&shop_id
+        full_data.append(np.array(list(product([i], sales.shop_id.unique(), sales.item_id.unique()))))
+
+    full_data = pd.DataFrame(np.vstack(full_data), columns = agg_group)
+    full_data = full_data.sort_values(by = agg_group)
+
+    return full_data
+
+
     
