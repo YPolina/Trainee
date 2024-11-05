@@ -87,11 +87,12 @@ def shop_name_check(df_shops, df_train, shop_name_1, shop_name_2):
     plt.show()
 
 #Merge two parts of one shop
-def shop_corr(df_shops, df_train, df_test, shop_name_1, shop_name_2):
+def shop_corr(df_shops, train, test, shop_name_1, shop_name_2):
     shop_id1 = df_shops.loc[df_shops.shop_name == shop_name_1, 'shop_id'].min()
     shop_id2 = df_shops.loc[df_shops.shop_name == shop_name_2, 'shop_id'].min()
-    df_train.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
-    df_test.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
+    df_shops.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
+    train.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
+    test.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
 
 #Check for missing data according 
 def completeness_check(df1, df2, feature):
