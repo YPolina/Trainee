@@ -106,7 +106,7 @@ def completeness_check(df1, df2, feature):
 def to_csv(df, filename):
     if os.path.isfile(filename):
         os.remove(filename)
-    return df.to_csv(f'{filename}')
+    return df.to_csv(f'{filename}', index=False)
 
 #Load from csv file
 def load(filename):
@@ -128,7 +128,7 @@ def distribution(df, feature):
     fig, axes = plt.subplots(1, 4, figsize = (15,4))
 
     axes[0].hist(x = df[feature], edgecolor='black', linewidth=1.2, color = 'b')
-    axes[0].set_title(f'Distribution of Item_cnt_month')
+    axes[0].set_title(f'Distribution of {feature}')
 
     axes[1].hist(x = lower_set[feature], edgecolor='black', linewidth=1.2, color = 'b')
     axes[1].set_title(f'Lower {p1}')
@@ -147,48 +147,3 @@ def distribution(df, feature):
     plt.show()
 
 
-
-
-#Outliers specification
-#feature_sel - features, by which outliers where detected
-def outliers_spec(outliers, feature_sel, df_cat, df_items):
-    outliers_spec = {}
-    for it_id in outliers.item_id.unique():
-        category_name = df_cat[df_cat.item_category_id == df_items[df_items.item_id == it_id].item_category_id.values[0]].item_category_name.values[0]
-        item_name = df_items[df_items.item_id == it_id].item_name.values[0]
-        sales = outliers[(outliers.item_id == it_id)][['date_block_num', feature_sel]]
-        outliers_spec[category_name] = [item_name, sales]
-
-    for key, values in outliers_spec.items():
-        print(f'Категория: {key}')
-        for val in values:
-            print(val)
-
-#using spearman correlation for two numerical features
-def correlation_table(numerical):
-    columns, correlations = [], []
-
-    for col in numerical:
-        columns.append(col)
-        correlations.append(stats.spearmanr(group[col], group['item_cnt_month'])[0])
-
-    num_corr = pd.DataFrame({'column': columns, 'correlation': correlations})
-
-    return num_corr.style.background_gradient()
-
-
-#Using correlation ratio for numerical and multicategorical features
-def correlation_ratio(categories, values, cat):
-    categories = np.array(categories)
-    values = np.array(values)
-    
-    ssw = 0
-    ssb = 0
-    for category in set(categories):
-        subgroup = values[np.where(categories == category)[0]]
-        ssw += sum((subgroup-np.mean(subgroup))**2)
-        ssb += len(subgroup)*(np.mean(subgroup)-np.mean(values))**2
-
-    coef =  (ssb / (ssb + ssw))**.5
-    print(f'Correlation between sales and {cat}')
-    print('Eta_squared: {:.4f}\nEta: {:.4f}'.format(coef**2, coef))
