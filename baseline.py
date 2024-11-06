@@ -141,4 +141,68 @@ def full_data_creation(df: df, agg_group: list, periods: int) -> df:
     return full_data
 
 
+def history_features(df: df, agg: list, new_feature: str) -> df:
+
+    group = (df[df.item_cnt_month > 0].groupby(agg)
+            ['date_block_num'].nunique().rename(new_feature).reset_index())
+
+    return df.merge(group, on = agg, how = 'left')
+
+def feat_from_agg(df: df, agg: list, new_col: str, aggregation: str) -> df:
     
+    if new_col == 'first_sales_date_block':
+        temp = df[df.item_cnt_month > 0]
+    else:
+        temp = df.copy()
+    temp = temp.groupby(agg).agg(aggregation).reset_index()
+    temp.columns = agg + [new_col]
+    df = pd.merge(df, temp, on=agg, how='left')
+
+    return df
+
+#Lags
+def lag_features(df: df, shift_col: str, group_columns: list = ['shop_id', 'item_id'], lags: list = [1,2,3]) -> df:
+    for lag in lags:
+        new_col = '{0}_lag_{1}'.format(shift_col, lag)
+        df[new_col] = df.groupby(group_columns)[shift_col].shift(lag)
+    if shift_col != 'item_cnt_month':
+        del df[shift_col]
+    return df
+
+def new_items(df: df, agg: list, new_col: str) -> df:
+    #Track of items with history == 1
+
+    temp = (df.query('item_history == 1')
+    .groupby(agg)
+    .agg({'item_cnt_month': 'mean'})
+    .reset_index()
+    .rename(columns = {'item_cnt_month':new_col}))
+
+    return pd.merge(df, temp, on = agg, how = 'left')
+
+
+def last_sales(df: df, new_feature: str, item_shop: bool) -> df:
+
+    cache = {}
+    #Feature initialization
+    df[new_feature] = -1
+    df[new_feature] = df[new_feature].astype(np.int8)
+
+    for idx, row in df.iterrows():
+        #If we need to agg item_id+shop_id
+        if item_shop:
+             key = str(row.item_id)+' '+str(row.shop_id)
+        else:
+            key = row.item_id
+        #First "last_sale" detection
+        if key not in cache:
+            if row.item_cnt_month!=0:
+                cache[key] = row.date_block_num
+        #If we have already sales
+        else:
+            last_date_block_num = cache[key]
+            df.at[idx, new_feature] = row.date_block_num - last_date_block_num
+            cache[key] = row.date_block_num 
+
+    return df
+  
