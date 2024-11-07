@@ -339,41 +339,6 @@ def new_items(df: df, agg: list, new_col: str) -> df:
     return pd.merge(df, temp, on = agg, how = 'left')
 
 
-def last_sales(df: df, new_feature: str, item_shop: bool) -> df:
-    """
-    Adds a feature indicating the last time a sale occurred for each item, either by item or item-shop pair.
-
-    Parameters:
-    - df: pd.DataFrame - DataFrame with historical sales data.
-    - new_feature: str - Name for the last sale feature.
-    - item_shop: bool - Whether to consider both item and shop for last sale tracking.
-
-    Returns:
-    - pd.DataFrame - DataFrame with the last sale feature.
-    """
-    cache = {}
-    #Feature initialization
-    df[new_feature] = -1
-    df[new_feature] = df[new_feature].astype(np.int8)
-
-    for idx, row in df.iterrows():
-        #If we need to agg item_id+shop_id
-        if item_shop:
-             key = str(row.item_id)+' '+str(row.shop_id)
-        else:
-            key = row.item_id
-        #First "last_sale" detection
-        if key not in cache:
-            if row.item_cnt_month!=0:
-                cache[key] = row.date_block_num
-        #If we have already sales
-        else:
-            last_date_block_num = cache[key]
-            df.at[idx, new_feature] = row.date_block_num - last_date_block_num
-            cache[key] = row.date_block_num 
-
-    return df
-
 #Data validation using TSS 
 def tss_cv(df: df, n_splits, model: Union[LinearRegression, XGBRegressor, LGBMRegressor]) -> np.ndarray:
     """
