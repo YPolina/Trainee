@@ -269,51 +269,52 @@ def history_features(df: df, agg: list, new_feature: str) -> df:
 
     return df.merge(group, on = agg, how = 'left')
 
-def feat_from_agg(df: df, agg: list, new_col: str, aggregation: dict) -> df:
+def feat_from_agg(df: df, agg: list, new_col: str, aggregation: dict, output_df: df) -> df:
 
     """
     Aggregates features based on specified columns, aggregation functions, and adds the result as a new feature.
 
     Parameters:
-    - df: pd.DataFrame - Original DataFrame to modify.
+    - df: pd.DataFrame - DataFrame for group creation
     - agg: list - Columns to group by (e.g., ['shop_id', 'item_id']).
     - new_col: str - Name for the new aggregated feature.
-    - aggregation: Dict[str, Union[str, List[str]]] - Aggregation functions to apply on the grouped data.
+    - aggregation: Dict[str, Union[str, List[str]]] - Aggregation functions to apply on the grouped data
+    - output_df: pd.DataFrame where to add feature
 
     Returns:
     - pd.DataFrame - DataFrame with the new aggregated feature.
     """
-    
     if new_col == 'first_sales_date_block':
         temp = df[df.item_cnt_month > 0]
     else:
         temp = df.copy()
-    temp = temp.groupby(agg).agg(aggregation).reset_index()
-    temp.columns = agg + [new_col]
-    df = pd.merge(df, temp, on=agg, how='left')
+    temp = temp.groupby(agg).agg(aggregation)
+    temp.columns = [new_col]
+    temp.reset_index(inplace = True)
+    output_df = pd.merge(output_df, temp, on=agg, how='left')
 
-    return df
+    return output_df
 
 #Lags
-def lag_features(df: df, shift_col: str, group_columns: list = ['shop_id', 'item_id'], lags: list = [1,2,3]) -> df:
+def lag_features(df: df, col: str, lags: list = [1,2,3]) -> df:
 
     """
     Adds lagged features to the DataFrame for specified columns over defined lag periods.
 
     Parameters:
     - df: pd.DataFrame - DataFrame containing features and target.
-    - shift_col: str - Column to create lags for.
-    - group_columns: list - Columns to group by for lagging (e.g., ['shop_id', 'item_id']).
+    - col: str - Column to create lags for.
     - lags: list - List of lag periods to apply.
 
     Returns:
     - pd.DataFrame - DataFrame with the newly created lagged features.
     """
-    for lag in lags:
-        new_col = '{0}_lag_{1}'.format(shift_col, lag)
-        df[new_col] = df.groupby(group_columns)[shift_col].shift(lag)
-    if shift_col != 'item_cnt_month':
-        del df[shift_col]
+    tmp = df[['date_block_num','shop_id','item_id',col]]
+    for i in lags:
+        shifted = tmp.copy()
+        shifted.columns = ['date_block_num','shop_id','item_id', col+'_lag_'+str(i)]
+        shifted['date_block_num'] += i
+        df = pd.merge(df, shifted, on=['date_block_num','shop_id','item_id'], how='left')
     return df
 
 def new_items(df: df, agg: list, new_col: str) -> df:
