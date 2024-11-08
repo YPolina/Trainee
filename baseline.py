@@ -84,6 +84,9 @@ def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) 
     full_data = full_data.merge(shops, on='shop_id', how='left')
     full_data = full_data.merge(items, on='item_id', how='left')
     full_data = full_data.merge(categories, on='item_category_id', how='left')
+    #Also train merge
+    train = train.merge(items.loc[:, ['item_id', 'item_category_id']], on = 'item_id', how = 'left')
+    train = train.merge(shops.loc[:, ['shop_id', 'city_id']], on = 'shop_id', how = 'left')
     
     #Column selection
     work_columns = [
@@ -95,19 +98,19 @@ def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) 
     #Shop_id encoding
     full_data['shop_id'] = LabelEncoder().fit_transform(full_data['shop_id'])
     
-    return full_data
+    return full_data, train
 
 #Class for validation
 class Validator(BaseEstimator, TransformerMixin):
 
     """
-    Initializes Validator with specified column types, value ranges, and options for checking duplicates and missing values.
+    Initializes Validator with specified column types, value ranges, and options for checking duplicates and missing values
 
     Parameters:
-    - column_types: Dict[str, str] - Expected data types for each column (e.g., {'shop_id': 'int64'}).
-    - value_ranges: Dict[str, Tuple[float, float]] - Expected numeric range for each column (e.g., {'month': (1, 12)}).
-    - check_duplicates: bool - Whether to check for duplicate rows in the DataFrame (default=True).
-    - check_missing: bool - Whether to check for missing values in the DataFrame (default=True).
+    - column_types: Dict[str, str] - Expected data types for each column (e.g., {'shop_id': 'int64'})
+    - value_ranges: Dict[str, Tuple[float, float]] - Expected numeric range for each column (e.g., {'month': (1, 12)})
+    - check_duplicates: bool - Whether to check for duplicate rows in the DataFrame (default=True)
+    - check_missing: bool - Whether to check for missing values in the DataFrame (default=True)
     """
     def __init__(self: TValidator, column_types: dict, value_ranges:dict, check_duplicates:bool = True, check_missing:bool = True) -> None:
 
@@ -124,14 +127,14 @@ class Validator(BaseEstimator, TransformerMixin):
     def _check_dtypes(self: TValidator, X: df) -> Exception | None:
 
         """
-        Checks data types of DataFrame columns against expected types defined in `column_types`.
+        Checks data types of DataFrame columns against expected types defined in column_types
 
         Parameters:
-        - X: pd.DataFrame - The DataFrame to validate column data types.
+        - X: pd.DataFrame - The DataFrame to validate column data types
 
         Raises:
-        - TypeError if any column's data type does not match the expected type.
-        - ValueError if a required column is missing from the DataFrame.
+        - TypeError if any column's data type does not match the expected type
+        - ValueError if a required column is missing from the DataFrame
         """
         
         #Iteration through all columns
@@ -148,13 +151,13 @@ class Validator(BaseEstimator, TransformerMixin):
     def _check_value_ranges(self: TValidator, X: df) -> Exception | None:
 
         """
-        Validates that numeric columns fall within specified minimum and maximum ranges in `value_ranges`.
+        Validates that numeric columns fall within specified minimum and maximum ranges in value_ranges
 
         Parameters:
-        - X: pd.DataFrame - The DataFrame to validate column value ranges.
+        - X: pd.DataFrame - The DataFrame to validate column value ranges
 
         Raises:
-        - ValueError if any value in a specified column is out of range.
+        - ValueError if any value in a specified column is out of range
         """
         
         #Iteration along columns
@@ -166,13 +169,13 @@ class Validator(BaseEstimator, TransformerMixin):
     def _check_non_negative_values(self: TValidator, X: df) -> Exception | None:
 
         """
-        Checks if all values in numeric columns are non-negative.
+        Checks if all values in numeric columns are non-negative
 
         Parameters:
-        - X: pd.DataFrame - The DataFrame to check for non-negative values.
+        - X: pd.DataFrame - The DataFrame to check for non-negative values
 
         Raises:
-        - ValueError if any column contains negative values.
+        - ValueError if any column contains negative values
         """
         #Iteration along columns
         for column in X.columns:
@@ -183,13 +186,13 @@ class Validator(BaseEstimator, TransformerMixin):
     def _check_duplicates(self: TValidator, X: df) -> Exception | None:
     
         """
-        Detects and raises an error if there are duplicate rows in the DataFrame.
+        Detects and raises an error if there are duplicate rows in the DataFrame
 
         Parameters:
-        - X: pd.DataFrame - The DataFrame to check for duplicates.
+        - X: pd.DataFrame - The DataFrame to check for duplicates
 
         Raises:
-        - ValueError if duplicates are found.
+        - ValueError if duplicates are found
         """
         #If duplicated columns are founded
         if X.duplicated().sum() != 0:
@@ -197,13 +200,13 @@ class Validator(BaseEstimator, TransformerMixin):
 
     def _check_missing(self: TValidator, X: df) -> Exception | None:
         """
-        Detects missing values in columns of the DataFrame.
+        Detects missing values in columns of the DataFrame
 
         Parameters:
-        - X: pd.DataFrame - The DataFrame to check for missing values.
+        - X: pd.DataFrame - The DataFrame to check for missing values
 
         Raises:
-        - ValueError if any column contains missing values.
+        - ValueError if any column contains missing values
         """
         missing_columns = X.columns[X.isna().any()].tolist()
         #If missing columns are founded
@@ -213,13 +216,13 @@ class Validator(BaseEstimator, TransformerMixin):
 
     def fit(self: TValidator, X: df) -> TValidator:
         """
-        Fits the Validator by setting column types and value ranges if not specified, based on the provided DataFrame.
+        Fits the Validator by setting column types and value ranges if not specified, based on the provided DataFrame
 
         Parameters:
-        - X: pd.DataFrame - The DataFrame from which to infer column types and value ranges if not predefined.
+        - X: pd.DataFrame - The DataFrame from which to infer column types and value ranges if not predefined
 
         Returns:
-        - Validator - Returns self after setting inferred properties.
+        - Validator - Returns self after setting inferred properties
         """
         if self.column_types is None:
             self.column_types = X.dtypes.to_dict()
@@ -232,13 +235,13 @@ class Validator(BaseEstimator, TransformerMixin):
     def transform(self: TValidator, X: df) -> str:
 
         """
-        Performs validation checks on a DataFrame, ensuring data types, ranges, and constraints are respected.
+        Performs validation checks on a DataFrame, ensuring data types, ranges, and constraints are respected
 
         Parameters:
-        - X: pd.DataFrame - The DataFrame to validate.
+        - X: pd.DataFrame - The DataFrame to validate
 
         Returns:
-        - str - Confirmation message ("Data is valid") if validation passes.
+        - str - Confirmation message ("Data is valid") if validation passes
         """
 
         if self.column_types:
@@ -257,14 +260,14 @@ class Validator(BaseEstimator, TransformerMixin):
 def reduce_mem_usage(df: df, verbose: bool=True) -> df:
 
     """
-    Reduces memory usage of a DataFrame by downcasting numeric columns to more efficient types.
+    Reduces memory usage of a DataFrame by downcasting numeric columns to more efficient types
 
     Parameters:
-    - df: pd.DataFrame - The DataFrame to optimize.
-    - verbose: bool - Whether to print memory usage reduction details (default=True).
+    - df: pd.DataFrame - The DataFrame to optimize
+    - verbose: bool - Whether to print memory usage reduction details (default=True)
 
     Returns:
-    - pd.DataFrame - DataFrame with optimized memory usage.
+    - pd.DataFrame - DataFrame with optimized memory usage
     """
 
     #To divide numerical and str
@@ -303,15 +306,15 @@ def reduce_mem_usage(df: df, verbose: bool=True) -> df:
 def full_data_creation(df: df, agg_group: list, periods: int) -> df:
 
     """
-    Generates a DataFrame with the full range of specified item and shop combinations for each period.
+    Generates a DataFrame with the full range of specified item and shop combinations for each period
 
     Parameters:
-    - df: pd.DataFrame - Input DataFrame with existing data.
-    - agg_group: list - List of columns to aggregate (e.g., ['date_block_num', 'shop_id', 'item_id']).
-    - periods: int - Number of periods to include in the generated DataFrame.
+    - df: pd.DataFrame - Input DataFrame with existing data
+    - agg_group: list - List of columns to aggregate (e.g., ['date_block_num', 'shop_id', 'item_id'])
+    - periods: int - Number of periods to include in the generated DataFrame
 
     Returns:
-    - pd.DataFrame - DataFrame containing all combinations of items, shops, and periods.
+    - pd.DataFrame - DataFrame containing all combinations of items, shops, and periods
     """
 
     full_data = []
@@ -328,96 +331,205 @@ def full_data_creation(df: df, agg_group: list, periods: int) -> df:
     return full_data
 
 
-def history_features(df: df, agg: list, new_feature: str) -> df:
+class FeatureExtractor:
+    def __init__(self, full_data: df, train: df):
+        """
+        Initialize with an existing DataFrame (full_data) for feature extraction
+        
+        Parameters:
+        full_data: pd.DataFrame - Pre-existing full data containing required columns
+        train: pd.DataFrame - Training data for aggregating revenue-based features
+        """
+        self.full_data = full_data
+        self.train = train
 
-    """
+    def history_features(self, agg: list, new_feature: str) -> df:
+        """
     Adds a feature counting the number of unique months for which each combination in `agg` has sales data.
 
     Parameters:
-    - df: pd.DataFrame - Original DataFrame with sales data.
     - agg: list - List of columns to group by (e.g., ['shop_id', 'item_id']).
     - new_feature: str - Name of the new feature to add.
 
     Returns:
     - pd.DataFrame - DataFrame with the additional feature based on historical sales counts.
     """
+        group = (self.full_data[self.full_data.item_cnt_month > 0]
+                 .groupby(agg)['date_block_num']
+                 .nunique()
+                 .rename(new_feature)
+                 .reset_index())
+        self.full_data = self.full_data.merge(group, on=agg, how='left')
 
-    group = (df[df.item_cnt_month > 0].groupby(agg)
-            ['date_block_num'].nunique().rename(new_feature).reset_index())
+    def feat_from_agg(self, df: df, agg: list, new_col: str, aggregation:list) -> df:        
+        """
+        Aggregates features based on specified columns, aggregation functions, and adds the result as a new feature.
 
-    return df.merge(group, on = agg, how = 'left')
+        Parameters:
+        - agg: list - Columns to group by (e.g., ['shop_id', 'item_id']).
+        - new_col: str - Name for the new aggregated feature.
+        - aggregation: Dict[str, Union[str, List[str]]] - Aggregation functions to apply on the grouped data
 
-def feat_from_agg(df: df, agg: list, new_col: str, aggregation: dict, output_df: df) -> df:
+        Returns:
+        - pd.DataFrame - DataFrame with the new aggregated feature.
+        """
+        temp = df[df.item_cnt_month > 0] if new_col == 'first_sales_date_block' else df.copy()
+        temp = temp.groupby(agg).agg(aggregation)
+        temp.columns = [new_col]
+        temp.reset_index(inplace=True)
+        self.full_data = pd.merge(self.full_data, temp, on=agg, how='left')
+        
+        if new_col == 'first_sales_date_block':
+            self.full_data.fillna(34, inplace=True)
 
-    """
-    Aggregates features based on specified columns, aggregation functions, and adds the result as a new feature.
+    def lag_features(self, col:str, lags: list) -> df:
+        """
+        Adds lagged features to the DataFrame for specified columns over defined lag periods.
 
-    Parameters:
-    - df: pd.DataFrame - DataFrame for group creation
-    - agg: list - Columns to group by (e.g., ['shop_id', 'item_id']).
-    - new_col: str - Name for the new aggregated feature.
-    - aggregation: Dict[str, Union[str, List[str]]] - Aggregation functions to apply on the grouped data
-    - output_df: pd.DataFrame where to add feature
+        Parameters:
+        - col: str - Column to create lags for.
+        - lags: list - List of lag periods to apply.
 
-    Returns:
-    - pd.DataFrame - DataFrame with the new aggregated feature.
-    """
-    if new_col == 'first_sales_date_block':
-        temp = df[df.item_cnt_month > 0]
-    else:
-        temp = df.copy()
-    temp = temp.groupby(agg).agg(aggregation)
-    temp.columns = [new_col]
-    temp.reset_index(inplace = True)
-    output_df = pd.merge(output_df, temp, on=agg, how='left')
+        Returns:
+        - pd.DataFrame - DataFrame with the newly created lagged features.
+        """
+        temp = self.full_data[['date_block_num', 'shop_id', 'item_id', col]]
+        for lag in lags:
+            shifted = temp.copy()
+            shifted.columns = ['date_block_num', 'shop_id', 'item_id', f"{col}_lag_{lag}"]
+            shifted['date_block_num'] += lag
+            self.full_data = pd.merge(self.full_data, shifted, on=['date_block_num', 'shop_id', 'item_id'], how='left')
 
-    if new_col == 'first_sales_date_block':
-        output_df = output_df.fillna(34)
+    def new_items(self, agg: list, new_col: str) -> df:
+        """
+        Adds a feature tracking average monthly sales for items with specific historical conditions (e.g., item history of 1).
 
-    return output_df
+        Parameters:
+        - agg: list - Columns to group by (e.g., ['shop_id', 'item_id']).
+        - new_col: str - Name for the new column.
 
-#Lags
-def lag_features(df: df, col: str, lags: list = [1,2,3]) -> df:
+        Returns:
+        - pd.DataFrame - DataFrame with the new column based on items' sales history.
+        """
 
-    """
-    Adds lagged features to the DataFrame for specified columns over defined lag periods.
+        temp = (self.full_data.query('item_history == 1')
+                .groupby(agg)['item_cnt_month']
+                .mean()
+                .reset_index()
+                .rename(columns={'item_cnt_month': new_col}))
+        self.full_data = self.full_data.merge(temp, on=agg, how='left')
 
-    Parameters:
-    - df: pd.DataFrame - DataFrame containing features and target.
-    - col: str - Column to create lags for.
-    - lags: list - List of lag periods to apply.
+    def add_revenue_features(self):
+        """Add revenue-based features and lags
 
-    Returns:
-    - pd.DataFrame - DataFrame with the newly created lagged features.
-    """
-    tmp = df[['date_block_num','shop_id','item_id',col]]
-    for i in lags:
-        shifted = tmp.copy()
-        shifted.columns = ['date_block_num','shop_id','item_id', col+'_lag_'+str(i)]
-        shifted['date_block_num'] += i
-        df = pd.merge(df, shifted, on=['date_block_num','shop_id','item_id'], how='left')
-    return df
+        Returns:
+        - pd.DataFrame - DataFrame with revenue lags.
+        """
+        # Revenue-based aggregations
+        revenue_agg_list = [
+            (self.train, ['date_block_num', 'item_category_id', 'shop_id'], 'sales_per_category_per_shop', {'revenue': 'sum'}),
+            (self.train, ['date_block_num', 'shop_id'], 'sales_per_shop', {'revenue': 'sum'}),
+            (self.train, ['date_block_num', 'item_id'], 'sales_per_item', {'revenue': 'sum'}),
+        ]
+        for df, agg, new_col, aggregation in revenue_agg_list:
+            self.feat_from_agg(df, agg, new_col, aggregation)
+        
+        
+        # Lag features for revenue aggregations
+        revenue_lag_dict = {
+            'sales_per_category_per_shop': [1],
+            'sales_per_shop': [1],
+            'sales_per_item': [1]
+        }
+        for feature, lags in revenue_lag_dict.items():
+            self.lag_features(feature, lags)
+            self.full_data.drop(columns=[feature], inplace=True)
 
-def new_items(df: df, agg: list, new_col: str) -> df:
-    """
-    Adds a feature tracking average monthly sales for items with specific historical conditions (e.g., item history of 1).
+    def add_item_price_features(self):
+        """Add item price-related features, including delta revenue
 
-    Parameters:
-    - df: pd.DataFrame - Original DataFrame with items and their monthly sales.
-    - agg: list - Columns to group by (e.g., ['shop_id', 'item_id']).
-    - new_col: str - Name for the new column.
+        Returns:
+        - pd.DataFrame - DataFrame with item_price and revenue lags.
+        """
+        # Average sales per shop for delta revenue
+        self.feat_from_agg(self.train, ['shop_id'], 'avg_sales_per_shop', {'revenue': 'mean'})
+        self.full_data['avg_sales_per_shop'] = self.full_data['avg_sales_per_shop'].astype(np.float32)
+        self.full_data['delta_revenue_lag_1'] = (
+            (self.full_data['sales_per_shop_lag_1'] - self.full_data['avg_sales_per_shop'])
+            / self.full_data['avg_sales_per_shop']
+        )
+        self.full_data.drop(columns=['avg_sales_per_shop', 'sales_per_shop_lag_1'], inplace=True)
 
-    Returns:
-    - pd.DataFrame - DataFrame with the new column based on items' sales history.
-    """
+        # Average item price features
+        self.feat_from_agg(self.train, ['item_id'], 'item_avg_item_price', {'item_price': 'mean'})
+        self.full_data['item_avg_item_price'] = self.full_data['item_avg_item_price'].astype(np.float16)
 
-    temp = (df.query('item_history == 1')
-    .groupby(agg)
-    .agg({'item_cnt_month': 'mean'})
-    .reset_index()
-    .rename(columns = {'item_cnt_month':new_col}))
+        self.feat_from_agg(self.train, ['date_block_num', 'item_id'], 'date_item_avg_item_price', {'item_price': 'mean'})
+        self.full_data['date_item_avg_item_price'] = self.full_data['date_item_avg_item_price'].astype(np.float16)
 
-    return pd.merge(df, temp, on = agg, how = 'left')
+        # Lag for item price feature and delta price calculation
+        self.lag_features('date_item_avg_item_price', [1])
+        self.full_data['delta_price_lag_1'] = (
+            (self.full_data['date_item_avg_item_price_lag_1'] - self.full_data['item_avg_item_price'])
+            / self.full_data['item_avg_item_price']
+        )
+        self.full_data.drop(columns=['item_avg_item_price', 'date_item_avg_item_price', 'date_item_avg_item_price_lag_1'], inplace=True)
+
+    def process(self):
+        """Execute feature extraction on full_data
+
+        Returns:
+        - pd.DataFrame - full data with all features
+        """
+        # History features
+        history = [
+            ('shop_id', 'shop_history'),
+            ('item_id', 'item_history'),
+            ('minor_category_id', 'minor_category_history')
+        ]
+        for group, new_feature in history:
+            self.history_features([group], new_feature)
+
+        # Features from aggregations
+        agg_list = [
+            (self.full_data, ['date_block_num', 'item_category_id'], 'avg_item_cnt_per_cat', {'item_cnt_month': 'mean'}),
+            (self.full_data, ['date_block_num', 'city_id', 'shop_id'], 'avg_item_cnt_per_city_per_shop', {'item_cnt_month': 'mean'}),
+            (self.full_data, ['date_block_num', 'shop_id'], 'avg_item_cnt_per_shop', {'item_cnt_month': 'mean'}),
+            (self.full_data, ['date_block_num', 'item_category_id', 'shop_id'], 'avg_item_cnt_per_cat_per_shop', {'item_cnt_month': 'mean'}),
+            (self.full_data, ['date_block_num', 'item_id'], 'avg_item_cnt_per_item', {'item_cnt_month': 'mean'}),
+            (self.full_data, ['date_block_num', 'item_category_id', 'shop_id'], 'med_item_cnt_per_cat_per_shop', {'item_cnt_month': 'median'}),
+            (self.full_data, ['date_block_num', 'main_category_id'], 'avg_item_cnt_per_main_cat', {'item_cnt_month': 'mean'}),
+            (self.full_data, ['date_block_num', 'minor_category_id'], 'avg_item_cnt_per_minor_cat', {'item_cnt_month': 'mean'}),
+            (self.full_data, ['item_id'], 'first_sales_date_block', {'item_cnt_month': 'min'})
+        ]
+        for df, agg, new_col, aggregation in agg_list:
+            self.feat_from_agg(df, agg, new_col, aggregation)
+
+        # Lagged features
+        lag_dict = {'avg_item_cnt_per_cat': [1], 'avg_item_cnt_per_shop': [1,3,6], 'avg_item_cnt_per_item': [1,3,6],
+            'avg_item_cnt_per_city_per_shop': [1], 'avg_item_cnt_per_cat_per_shop': [1], 
+            'med_item_cnt_per_cat_per_shop': [1], 'avg_item_cnt_per_main_cat': [1],
+            'avg_item_cnt_per_minor_cat': [1], 'item_cnt_month': [1,2,3,6,12]}
+
+        for feature, lags in lag_dict.items():
+            self.lag_features(feature, lags)
+            if feature != 'item_cnt_month':
+                self.full_data.drop(columns=[feature], inplace=True)
+
+        # Revenue and item price-related features
+        self.add_revenue_features()
+        self.add_item_price_features()
+
+        # Last sale and time since last sale features
+        self.full_data['last_sale'] = self.full_data.groupby(['shop_id', 'item_id'])['date_block_num'].shift(1)
+        self.full_data['months_from_last_sale'] = self.full_data['date_block_num'] - self.full_data['last_sale']
+        self.full_data['months_from_first_sale'] = self.full_data['date_block_num'] - self.full_data.groupby(['shop_id', 'item_id'])['date_block_num'].transform('min')
+        self.full_data['months_from_last_sale'].fillna(-1, inplace=True)
+        self.full_data.drop('last_sale', axis = 1, inplace = True)
+        # Fill NaNs
+        self.full_data.fillna(0, inplace=True)
+
+        return self.full_data
 
 
 #Data validation using TSS 
