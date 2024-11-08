@@ -449,33 +449,6 @@ def prediction(X_test: np.ndarray, model: Union[LinearRegression, XGBRegressor, 
 
 
 
-    merge_group = ['date_block_num', 'shop_id', 'item_id']
-    #Iteration through all aggregated features
-    for col in tqdm(lag_columns, desc="Feature importance evaluation", ncols=75):
-
-        time.sleep(0.1) 
-        
-        #Copy of dataframe
-        test_data = base_data.merge(df.loc[:, merge_group+[col]], on = merge_group, how = 'left')
-
-        X_train, y_train, X_val, y_val, X_test = data_split(test_data)
-        model = XGBRegressor(n_estimators = 75, eval_metric="rmse", early_stopping_rounds = 20)
-        eval_set = [(X_train, y_train), (X_val, y_val)]
-        model.fit(X_train,y_train, eval_set=eval_set, verbose = False)
-        
-        # Extract feature importance for the specific feature
-        feature_importance_percent = model.feature_importances_[-1] * 100
-
-        # Append the feature name, RMSE, and importance percentage
-        results.append((col, model.best_score, feature_importance_percent))
-
-    # Sort results by RMSE
-    results = sorted(results, key=lambda x: x[1])
-    for col, rmse, importance in results:
-        print(f"Feature: {col}, RMSE: {rmse}, Importance: {importance:.2f}%")
-
-    return results
-
 #Feature importances plot
 def feature_importances_plot(X_train: np.ndarray, model: Union[XGBRegressor, LGBMRegressor]) -> Figure:
 
