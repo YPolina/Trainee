@@ -533,7 +533,7 @@ class FeatureExtractor:
 
 
 #Data validation using TSS 
-def tss_cv(df: df, n_splits, model: Union[LinearRegression, XGBRegressor, LGBMRegressor]) -> np.ndarray:
+def tss_cv(df: df, n_splits, model: Union[LinearRegression, XGBRegressor, LGBMRegressor], true_pred_plot: bool = True):
     """
     Performs cross-validation for time series data using specified regression model and calculates RMSE.
 
@@ -569,32 +569,23 @@ def tss_cv(df: df, n_splits, model: Union[LinearRegression, XGBRegressor, LGBMRe
         n += 1
     print(f'Mean RMSE for all splits: {np.mean(rmse):.3f}')
 
-    return y_val, y_pred, model
+    #Plots true versus predicted values to assess model performance visually
+    if true_pred_plot:
 
-#Plot of differences between predicted and true values
-def true_pred_plot(y_true: np.ndarray, y_pred: np.ndarray) -> Figure:
-    """
-    Plots true versus predicted values to assess model performance visually.
+        plt.figure(figsize = (10,6))
 
-    Parameters:
-    - y_true: np.ndarray - Array of true target values.
-    - y_pred: np.ndarray - Array of predicted target values.
+        #Difference
+        sns.scatterplot(x = y_val, y = y_pred, color = 'blue', alpha = 0.5, s = 30, edgecolor = 'k')
+        #If prediction will be equal to our target
+        plt.plot([y_val.min(), y_val.max()], [y_val.min(), y_val.max()], color='red', linestyle='--')
 
-    Returns:
-    - Figure - Scatter plot of true vs predicted values.
-    """
+        plt.title("True vs Predicted Values")
+        plt.xlabel("True Values")
+        plt.ylabel("Predicted Values")
+        plt.show()
 
-    plt.figure(figsize = (10,6))
 
-    #Difference
-    sns.scatterplot(x = y_true, y = y_pred, color = 'blue', alpha = 0.5, s = 30, edgecolor = 'k')
-    #If prediction will be equal to our target
-    plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], color='red', linestyle='--')
 
-    plt.title("True vs Predicted Values")
-    plt.xlabel("True Values")
-    plt.ylabel("Predicted Values")
-    plt.show()
 
 #Split begore model fitting (with eval_set)
 def data_split(df: df) -> np.ndarray:
@@ -622,20 +613,53 @@ def data_split(df: df) -> np.ndarray:
 
     return X_train, y_train, X_val, y_val, X_test
 
-#Prediction creating submission file
-def prediction(X_test: np.ndarray, model: Union[LinearRegression, XGBRegressor, LGBMRegressor]) -> str:
+#Training
+def train_predict(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray, 
+                  model_: Union[XGBRegressor, LGBMRegressor], model_params: dict = None, X_val: np.ndarray = None, 
+                  y_val: np.ndarray = None) -> np.ndarray:
     """
-    Generates and saves a submission file with predictions for the test set.
+    Train model and make predictions
 
     Parameters:
-    - X_test: np.ndarray - Feature set for prediction.
-    - model: Union[LinearRegression, XGBRegressor, LGBMRegressor] - Trained model to use for predictions.
+    - X_train: np.ndarray - Feature set for training
+    - y_train: np.ndarray - target for training
+    - X_val: np.ndarray - Feature set for validation
+    - y_val: np.ndarray - target for validation
+    - X_test: np.ndarray - Feature set for prediction
+    - model: Union[LinearRegression, XGBRegressor, LGBMRegressor] - Trained model to use for predictions
+    - model_params: Dict[str, Any] - Model parameters to be set using set_params
 
     Returns:
-    - str - Confirmation message indicating submission file was created.
+    - y_pred: np.ndarray - prediction
+    """
+    model = model_
+    if model_params is not None:
+        model.set_params(**model_params)
+
+    if isinstance(model, LinearRegression):
+        model.fit(X_train, y_train)
+    else:
+        model.fit(X_train, y_train, eval_set=[(X_val, y_val)])
+    
+    # Make predictions
+    y_pred = np.round(model.predict(X_test),2).clip(0,20)
+
+    return y_pred
+
+
+
+#Prediction creating submission file
+def submission(y_pred: np.ndarray) -> str:
+    """
+    Saves a submission file with predictions for the test set.
+
+    Parameters:
+    - y_pred: np.ndarray - prediction
+
+    Returns:
+    - str - Confirmation message indicating submission file was created
     """
 
-    y_pred = np.round(model.predict(X_test),2).clip(0,20)
     submission = pd.DataFrame({'ID': np.arange(len(y_pred)), 'item_cnt_month': y_pred})
     submission.to_csv('submission.csv', index = False)
     return 'Submission file created'
