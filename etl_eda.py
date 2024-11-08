@@ -8,113 +8,109 @@ from scipy import stats
 from scipy.stats import kstest, normaltest
 
 
-#Ectraction the data from dataset
-def exctract(dir):
+class DataQualityLayer:
+    def __init__(self):
+        pass
     
-    file_paths = os.listdir(dir)
-    return list(map(lambda path: pd.read_csv(f'{dir}/{path}'), file_paths))
+    # Data extraction
+    def extract_data(self, directory: str):
+        """Extracts all CSV files in a directory and loads them into a list of DataFrames"""
+        file_paths = os.listdir(directory)
+        data_frames = [pd.read_csv(os.path.join(directory, path)) for path in file_paths]
+        return data_frames
 
-#Distribution using boxplot
-def boxplot(df, feature):
-    plt.figure(figsize = (10,6))
+    # Data Distribution Visualization
+    def boxplot(self, df, feature, color='blue'):
+        """Generates a boxplot for a given feature in a DataFrame"""
+        plt.figure(figsize=(10, 6))
+        sns.boxplot(x=df[feature], color=color)
+        plt.xlabel(feature)
+        plt.title(f'Distribution of {feature}')
+        plt.show()
 
-    sns.boxplot(x = df[feature], color='blue')
+    # Outlier Analysis
+    def outlier_check(self, df, feature, value, x, y):
+        """Visualizes potential outliers for a specific feature"""
+        plt.figure(figsize=(10, 6))
+        data = df.loc[df[feature] == value].reset_index(drop=True)
+        sns.scatterplot(data=data, x=x, y=y, color='green')
+        plt.ylabel(y)
+        plt.xlabel(x)
+        plt.title(f'Outlier check for {feature} = {value}')
+        plt.show()
 
-    plt.xlabel(f"{feature}")
-    plt.title(f'Distribution of {feature}')
+    # Check for Duplicates and NA values
+    def duplicates_na_check(self, dfs, na_threshold=3, duplicate_threshold=3):
+        """Checks for and handles duplicates and missing values in DataFrames list"""
+        for idx, df in enumerate(dfs):
+            # Missing values check
+            if df.isna().values.any():
+                print(f"DataFrame[{idx}] has missing values:\n", df[df.isna().any(axis=1)])
+                na_percentage = (df.isna().sum().sum() / df.size) * 100
+                print(f'Percentage of missing values: {na_percentage:.2f}%')
+                if na_percentage < na_threshold:
+                    df.dropna(inplace=True)
+                    print('Missing values successfully dropped')
+            # Duplicates check
+            if df.duplicated(keep=False).any():
+                print(f"DataFrame[{idx}] has duplicates:\n", df[df.duplicated()])
+                duplicate_percentage = (df.duplicated().sum() / len(df)) * 100
+                print(f'Percentage of duplicates: {duplicate_percentage:.2f}%')
+                if duplicate_percentage < duplicate_threshold:
+                    df.drop_duplicates(inplace=True)
+                    print('Duplicates successfully dropped')
 
-    plt.show()
+    # Check for shops with similar names
+    def shop_name_comparison(self, df_shops, df_train, shop_name_1, shop_name_2):
+        """Compares the sales of two shops with similar names"""
+        shop_id1 = df_shops[df_shops.shop_name == shop_name_1].shop_id.min()
+        shop_id2 = df_shops[df_shops.shop_name == shop_name_2].shop_id.min()
+        sales_1 = df_train[df_train.shop_id == shop_id1].groupby('date_block_num')['item_cnt_month'].mean()
+        sales_2 = df_train[df_train.shop_id == shop_id2].groupby('date_block_num')['item_cnt_month'].mean()
 
-#understanding the outlier's nature
-def add_outlier_check(df, feature, num, x, y):
+        plt.figure(figsize=(10, 6))
+        plt.bar(sales_1.index, sales_1.values, color='green', label=shop_name_1, alpha=0.8)
+        plt.bar(sales_2.index, sales_2.values, color='blue', label=shop_name_2, alpha=0.7)
+        plt.xlabel('Date_block_num')
+        plt.ylabel('Average item count')
+        plt.legend()
+        plt.title('Comparison of Shops with Similar Names')
+        plt.show()
 
-    plt.figure(figsize = (10,6))
+    # Replace duplicate shops by name
+    def replace_shops(self, shops, train, test, shop_name_1, shop_name_2):
+        """Replace duplicate shops based on similar names by replacing shop_id"""
+        shop_id1 = shops[shops.shop_name == shop_name_1].shop_id.min()
+        shop_id2 = shops[shops.shop_name == shop_name_2].shop_id.min()
+        # Replace shop_id2 with shop_id1 across datasets
+        train.loc[train.shop_id == shop_id1, 'shop_id'] = shop_id2
+        test.loc[test.shop_id == shop_id1, 'shop_id'] = shop_id2
+        shops.loc[shops.shop_id == shop_id1, 'shop_id'] = shop_id2
 
-    data = df.loc[df[feature] == num].reset_index(drop = True)
+    # Completeness check between datasets
+    def completeness_check(self, df1, df2, feature):
+        """Checks completeness of feature data between two DataFrames"""
+        missing_count = sum(~df1[feature].isin(df2[feature].unique()))
+        print(f'Total missing entries in {feature}: {missing_count}')
+        return missing_count
 
-    sns.scatterplot(data = data, x = x, y = y, color = 'green')
-
-    plt.ylabel(f'{y}')
-    plt.xlabel(f'{x}')
-    plt.title(f'Outlier check for {feature} = {num}')
-
-    plt.show()
-
-#duplicates and na check
-def duplicates_na(dfs):
-    for i in range(len(dfs)):
-        #check for any missing values
-        if dfs[i].isna().values.any():
-            print(dfs[i].loc[dfs[i].isna().any(axis=1)])
-            percentage_na = (dfs[i].isna().any().sum()/len(dfs[i]))*100
-            print(f'Percentage of missing values: {percentage_na}%')
-
-            #Drop if less than 3% of missing values
-            if percentage_na < 3:
-                dfs[i].drop_na()
-                print('Missing values successfully dropped')
-        #check for any duplicates
-        if dfs[i].duplicated(keep = False).values.any():
-            print(dfs[i][dfs[i].duplicated()])
-            percentage = dfs[i].duplicated().sum()/len(dfs[i]) * 100
-            print(f'\nPercentage of duplicates in df_s[{i}]: {(dfs[i].duplicated().sum()/len(dfs[i])):.4%}')
-            #Drop if less than 3% of duplicates
-            if percentage < 3:
-                dfs[i].drop_duplicates()
-                print('Duplicates successfully dropped')
-
-#check of similar-named shops
-def shop_name_check(df_shops, df_train, shop_name_1, shop_name_2):
-    shop_id1 = df_shops.loc[df_shops.shop_name == shop_name_1, 'shop_id'].min()
-    c1 = df_train[df_train['shop_id'] == shop_id1].reset_index(drop = True)
-    c1 = pd.DataFrame(c1.groupby('date_block_num').agg({'item_cnt_month': 'mean'}))
-
-    shop_id2 = df_shops.loc[df_shops.shop_name == shop_name_2, 'shop_id'].min()
-    c2 = df_train[df_train['shop_id'] == shop_id2].reset_index(drop = True)
-    c2 = pd.DataFrame(c2.groupby('date_block_num').agg({'item_cnt_month': 'mean'}))
-    
-    plt.figure(figsize = (10,6))
-
-    plt.bar(c1.index, c1['item_cnt_month'], color = 'g', label = shop_name_1, alpha = 0.8)
-    plt.bar(c2.index, c2['item_cnt_month'], color = 'b', label = shop_name_2, alpha = 0.7)
-
-    plt.xticks(range(0,34));
-    plt.legend()
-    plt.xlabel('Date_block_num')
-    plt.ylabel('item_cnt_month')
-    plt.title('Shops comparison')
-
-    plt.show()
-
-#Merge two parts of one shop
-def shop_corr(df_shops, train, test, shop_name_1, shop_name_2):
-    shop_id1 = df_shops.loc[df_shops.shop_name == shop_name_1, 'shop_id'].min()
-    shop_id2 = df_shops.loc[df_shops.shop_name == shop_name_2, 'shop_id'].min()
-    df_shops.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
-    train.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
-    test.replace({'shop_id': {shop_id2: shop_id1}}, inplace = True)
-
-#Check for missing data according 
-def completeness_check(df1, df2, feature):
-    count = 0
-    for id in df1[feature].unique():
-        if len(df2[df2[feature] == id]) == 0:
-            count += 1
-    return f'The total amount of missing data:{count}'
-
-#Convertation to csv
-def to_csv(df, filename):
-    if os.path.isfile(filename):
-        os.remove(filename)
-    return df.to_csv(f'{filename}', index=False)
-
-#Load from csv file
-def load(filename):
-
-    return pd.read_csv(filename, index_col = 0)
+    # Export DataFrame to CSV
+    def save_to_csv(self, df, filename):
+        """Saves the DataFrame to a CSV file"""
+        if os.path.exists(filename):
+            os.remove(filename)
+        df.to_csv(filename, index=False)
+        print(f'Saved DataFrame to {filename}')
 
 
 #EDA
+
+#loader
+def loader(file: str) -> pd.DataFrame:
+
+    df = pd.read_csv(file)
+    return df
+
 
 #Distribution
 def distribution(df, feature):
