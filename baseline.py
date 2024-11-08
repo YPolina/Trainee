@@ -447,35 +447,6 @@ def prediction(X_test: np.ndarray, model: Union[LinearRegression, XGBRegressor, 
     submission.to_csv('submission.csv', index = False)
     return 'Submission file created'
 
-#Check data leakage
-def feature_importancy_check(df: df) -> list[tuple[str, float, float]]:
-
-    """
-    Evaluates feature importance for lag features in the dataframe by calculating RMSE 
-    and feature importance percentage using cross-validation with XGBRegressor.
-    
-    Parameters:
-    - df: pd.DataFrame - The original dataframe containing features and target.
-    Returns:
-    - List[Tuple[str, float, float]] - A sorted list of tuples with feature name, RMSE, 
-                                       and feature importance percentage.
-    """
-
-    #Dataframe without lag features
-    base_data = df.loc[:, ~df.columns.str.contains('_lag_')]
-    lag_columns = list(df.loc[:, df.columns.str.contains('_lag_')].columns)
-
-    results = []
-    #RMSE for baseline
-    X_train, y_train, X_val, y_val, X_test = data_split(base_data)
-    model = XGBRegressor(n_estimators = 75, eval_metric="rmse", early_stopping_rounds = 20)
-    eval_set = [(X_train, y_train), (X_val, y_val)]
-    model.fit(X_train,y_train, eval_set=eval_set, verbose = False)
-    #Biggest Feature importance
-    biggest_importance = model.feature_importances_.argsort()[-1]
-    feature_importance_percent = model.feature_importances_[biggest_importance] * 100
-    # Baseline RMSE, and biggest importance percentage
-    results.append(('Baseline', model.best_score, feature_importance_percent))
 
 
     merge_group = ['date_block_num', 'shop_id', 'item_id']
