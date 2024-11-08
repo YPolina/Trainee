@@ -3,6 +3,7 @@ from pandas.core.frame import DataFrame as df
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from typing import TypeVar
+from sklearn.preprocessing import LabelEncoder
 from itertools import product
 from typing import Union
 from xgboost import XGBRegressor
@@ -18,6 +19,83 @@ import time
 
 #To use in annotation for the self parameter of class Validator
 TValidator = TypeVar("TValidator", bound="Validator")
+
+def loader(file_name: str) -> df:
+    '''
+    Data loader from .csv
+
+    Parameters:
+    - file_name: file name in .csv format
+
+    Returns:
+    df: pd.DataFrame - data from .csv file
+    '''
+
+    if not file_name.endswith ('.csv'):
+        raise ValueError(f'Expected .csv file')
+
+    df = pd.read_csv(file_name)
+
+    return df
+
+def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) -> df:
+    """
+        Create full data from all dataframes
+
+        Parameters:
+        - train: pd.DataFrame - The DataFrame with target value
+        - test: pd.DataFrame - The DataFrame with shop&item pairs we need to make prediction
+        - shops: pd.DataFrame - The DataFrame with shop_id and city_id information
+        - items: pd.DataFrame - The DataFrame with item_id and item_category_id information
+        - categories: pd.DataFrame - The DataFrame with item_category_id, main_category_id, minor_category_id information
+
+        Returns:
+        - full_data: pd.DataFrame - The DataFrame with merged information from all input dataframes
+    """    
+
+    #Target creation - 'item_cnt_month'
+    target_group = (
+        train.groupby(['date_block_num', 'shop_id', 'item_id'])['item_cnt_day']
+        .sum().rename('item_cnt_month').reset_index()
+    )
+    
+    #Revenue feature
+    train['revenue'] = train['item_price'] * train['item_cnt_day']
+    
+    #Agg columns and periods for full_data with all shop&item pairs
+    columns = ['date_block_num', 'shop_id', 'item_id']
+    periods = train['date_block_num'].nunique()
+    
+    full_data = full_data_creation(df=train, agg_group=columns, periods=periods)
+    
+    #Merge full data with target
+    full_data = full_data.merge(target_group, on=columns, how='left')
+    
+    #Test set preparation and merge with full data
+    test['date_block_num'] = 34
+    test = test.drop(columns='ID', errors='ignore')
+    full_data = pd.concat([full_data, test], keys=columns, ignore_index=True, sort=False)
+    
+    #Missing filling and target clipping
+    full_data = full_data.fillna(0)
+    full_data['item_cnt_month'] = full_data['item_cnt_month'].clip(0, 20).astype(np.float16)
+    
+    #Merging full_data with all additional information from shops, items, categories dataframes
+    full_data = full_data.merge(shops, on='shop_id', how='left')
+    full_data = full_data.merge(items, on='item_id', how='left')
+    full_data = full_data.merge(categories, on='item_category_id', how='left')
+    
+    #Column selection
+    work_columns = [
+        'date_block_num', 'shop_id', 'item_cnt_month', 'item_id', 
+        'city_id', 'item_category_id', 'main_category_id', 'minor_category_id'
+    ]
+    full_data = full_data.loc[:, work_columns]
+    
+    #Shop_id encoding
+    full_data['shop_id'] = LabelEncoder().fit_transform(full_data['shop_id'])
+    
+    return full_data
 
 #Class for validation
 class Validator(BaseEstimator, TransformerMixin):
@@ -292,6 +370,9 @@ def feat_from_agg(df: df, agg: list, new_col: str, aggregation: dict, output_df:
     temp.columns = [new_col]
     temp.reset_index(inplace = True)
     output_df = pd.merge(output_df, temp, on=agg, how='left')
+
+    if new_col == 'first_sales_date_block':
+        output_df = output_df.fillna(34)
 
     return output_df
 
