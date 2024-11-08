@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from pandas.core.frame import DataFrame as df
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -20,25 +21,23 @@ import time
 #To use in annotation for the self parameter of class Validator
 TValidator = TypeVar("TValidator", bound="Validator")
 
-def loader(file_name: str) -> df:
+def loader(directory: str = './competitive-data-science-predict-future-sales') -> df:
     '''
     Data loader from .csv
 
     Parameters:
-    - file_name: file name in .csv format
+    - directory: str - where are files are stored
 
     Returns:
-    df: pd.DataFrame - data from .csv file
+    data: pd.DataFrames - data from .csv file
     '''
 
-    if not file_name.endswith ('.csv'):
-        raise ValueError(f'Expected .csv file')
+    file_paths = os.listdir(directory)
+    dataframes = [pd.read_csv(os.path.join(directory, path)) for path in file_paths]
+    del dataframes[3]
+    return dataframes
 
-    df = pd.read_csv(file_name)
-
-    return df
-
-def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) -> df:
+def prepare_full_data(items: df, categories: df, train: df, shops:df,  test: df) -> df:
     """
         Create full data from all dataframes
 
@@ -52,6 +51,12 @@ def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) 
         Returns:
         - full_data: pd.DataFrame - The DataFrame with merged information from all input dataframes
     """    
+    #Outliers drop from EDA 
+    train.drop(train[(train.item_id.isin([20842, 21483, 13200, 5748,   475,   476,  3143, 14170,  1349,  2410,  7238,  2411,
+        3142,   102, 14173,  5909,  7241,  4856, 5960]))].index, inplace = True)
+    train['item_price'] = train['item_price'].clip(0, 50000)
+    train['item_cnt_day'] = train['item_cnt_day'].clip(0, 1000)
+    train.drop_duplicates(inplace = True)
 
     #Target creation - 'item_cnt_month'
     target_group = (
@@ -65,6 +70,7 @@ def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) 
     #Agg columns and periods for full_data with all shop&item pairs
     columns = ['date_block_num', 'shop_id', 'item_id']
     periods = train['date_block_num'].nunique()
+
     
     full_data = full_data_creation(df=train, agg_group=columns, periods=periods)
     
@@ -79,6 +85,22 @@ def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) 
     #Missing filling and target clipping
     full_data = full_data.fillna(0)
     full_data['item_cnt_month'] = full_data['item_cnt_month'].clip(0, 20).astype(np.float16)
+
+    #City feature
+    encoder = LabelEncoder()
+    shops['city'] = shops['shop_name'].str.split(' ').apply(lambda x: x[0])
+    shops.replace({'city': 'Сергиев'}, 'Сергиев Посад', inplace=True)
+    shops['city_id'] = encoder.fit_transform(shops['city'])
+
+    #Categories features
+    categories['main_category'] = categories['item_category_name'].str.split(' - ').apply(lambda x: x[0])
+    categories.replace({'main_category': ['Игры PC', 'Игры Android', 'Игры MAC']}, 'Игры', inplace=True)
+    categories.replace({'main_category': ['Карты оплаты (Кино, Музыка, Игры)']}, 'Карты оплаты', inplace=True)
+    categories.replace({'main_category': ["PC", 'Чистые носители (штучные)', "Чистые носители (шпиль)", 'Чистые носители']}, 'Аксессуары', inplace=True)
+    categories.replace({'main_category': ["Билеты (Цифра)", 'Служебные']}, 'Билеты', inplace=True)
+    categories['main_category_id'] = encoder.fit_transform(categories['main_category'])
+    categories['minor_category'] = categories['item_category_name'].str.split(' - ').apply(lambda x: x[1] if len(x) > 1 else x[0])
+    categories['minor_category_id'] = encoder.fit_transform(categories['minor_category'])
     
     #Merging full_data with all additional information from shops, items, categories dataframes
     full_data = full_data.merge(shops, on='shop_id', how='left')
@@ -87,11 +109,21 @@ def prepare_full_data(train: df, test: df, shops:df, items: df, categories: df) 
     #Also train merge
     train = train.merge(items.loc[:, ['item_id', 'item_category_id']], on = 'item_id', how = 'left')
     train = train.merge(shops.loc[:, ['shop_id', 'city_id']], on = 'shop_id', how = 'left')
+
+    #Month and year features
+    group = full_data.groupby('date_block_num').agg({'item_cnt_month': 'sum'})
+    group = group.reset_index()
+    group['date'] = pd.date_range(start='2013-01-01', periods=35, freq='ME')
+    group['month'] = group['date'].dt.month
+    group['year'] = group['date'].dt.year
+    group.drop(columns = ['date', 'item_cnt_month'], inplace = True)
+    full_data = full_data.merge(group, on = 'date_block_num', how = 'left')
     
     #Column selection
     work_columns = [
         'date_block_num', 'shop_id', 'item_cnt_month', 'item_id', 
-        'city_id', 'item_category_id', 'main_category_id', 'minor_category_id'
+        'city_id', 'item_category_id', 'main_category_id', 'minor_category_id',
+        'year', 'month'
     ]
     full_data = full_data.loc[:, work_columns]
     
@@ -257,7 +289,7 @@ class Validator(BaseEstimator, TransformerMixin):
         return f'Data is valid'
 
 #Reducing memory usage
-def reduce_mem_usage(df: df, verbose: bool=True) -> df:
+def reduce_mem_usage(df: df, verbose: bool=True) -> None:
 
     """
     Reduces memory usage of a DataFrame by downcasting numeric columns to more efficient types
@@ -266,8 +298,6 @@ def reduce_mem_usage(df: df, verbose: bool=True) -> df:
     - df: pd.DataFrame - The DataFrame to optimize
     - verbose: bool - Whether to print memory usage reduction details (default=True)
 
-    Returns:
-    - pd.DataFrame - DataFrame with optimized memory usage
     """
 
     #To divide numerical and str
@@ -300,7 +330,7 @@ def reduce_mem_usage(df: df, verbose: bool=True) -> df:
     end_mem = df.memory_usage().sum() / 1024**2
     #To get information about the progress
     if verbose: print('Mem. usage decreased to {:5.2f} Mb ({:.1f}% reduction)'.format(end_mem, 100 * (start_mem - end_mem) / start_mem))
-    return df
+    return None
 
 #Creating df with full range of data
 def full_data_creation(df: df, agg_group: list, periods: int) -> df:
