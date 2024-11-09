@@ -674,7 +674,7 @@ def train_predict(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray,
     # Make predictions
     y_pred = np.round(model.predict(X_test),2).clip(0,20)
 
-    return y_pred
+    return y_pred, model
 
 
 
