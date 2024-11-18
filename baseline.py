@@ -1108,7 +1108,7 @@ def XGBRegressor_hyperparameter_tuning(X: df, y: np.ndarray) -> dict:
         "subsample": hp.uniform("subsample", 0.5, 1.0),
         "colsample_bytree": hp.uniform("colsample_bytree", 0.5, 1.0),
         "gamma": hp.uniform("gamma", 0, 5),
-        "min_child_weight": hp.quniform("min_child_weight", 50, 400, 25),
+        "min_child_weight": hp.quniform("min_child_weight", 1, 10, 1),
         "lambda": hp.uniform("lambda", 0, 1),
         "alpha": hp.uniform("alpha", 0, 1),
     }
