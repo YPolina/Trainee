@@ -1,4 +1,5 @@
 *.csv
 venv/
 __pycache__/
-1.py
+competitive-data-science-predict-future-sales/
+modeling.ipynb
