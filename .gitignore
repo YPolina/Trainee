@@ -3,3 +3,4 @@ venv/
 __pycache__/
 competitive-data-science-predict-future-sales/
 modeling.ipynb
+ds.log
