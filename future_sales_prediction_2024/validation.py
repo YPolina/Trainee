@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from typing import TypeVar
+from pandas.core.frame import DataFrame as df
 
 # To use in annotation for the self parameter of class Validator
 TValidator = TypeVar("TValidator", bound="Validator")

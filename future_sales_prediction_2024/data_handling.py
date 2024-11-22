@@ -3,6 +3,7 @@ import os
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from itertools import product
+from pandas.core.frame import DataFrame as df
 
 def loader(directory: str = "./competitive-data-science-predict-future-sales") -> df:
     """

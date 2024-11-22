@@ -7,6 +7,7 @@ from sklearn.metrics import root_mean_squared_error
 from sklearn.model_selection import TimeSeriesSplit
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pandas.core.frame import DataFrame as df
 
 
 # Data validation using TSS

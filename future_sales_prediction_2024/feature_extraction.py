@@ -8,6 +8,7 @@ from lightgbm import LGBMRegressor
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pandas.core.frame import DataFrame as df
 
 class FeatureExtractor:
     def __init__(self, full_data: df, train: df):

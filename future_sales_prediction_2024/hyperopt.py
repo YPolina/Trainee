@@ -2,6 +2,7 @@ import numpy as np
 from xgboost import XGBRegressor
 from sklearn.metrics import root_mean_squared_error
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+from pandas.core.frame import DataFrame as df
 
 def hyperparameter_tuning(X: df, y: np.ndarray) -> dict:
     """

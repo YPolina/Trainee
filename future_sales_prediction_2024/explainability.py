@@ -5,6 +5,7 @@ import shap
 import matplotlib.pyplot as plt
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error
 from xgboost import XGBRegressor
+from pandas.core.frame import DataFrame as df
 
 class Explainability:
     """

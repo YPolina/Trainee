@@ -1,0 +1,5 @@
+graft future_sales_prediction_2024
+include README.md
+include LICENSE
+include setup.py
+global -exclude *.py[cod]
