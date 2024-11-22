@@ -28,6 +28,7 @@ setuptools.setup(
         "pandas",
         "numpy",
         "scikit-learn",
+        "lightgbm",
         "xgboost",
         "matplotlib",
         "seaborn",
@@ -36,9 +37,6 @@ setuptools.setup(
         "matplotlib",
         "seaborn"
 
-    ],
-    extras_require=[
-        "lightgbm"
     ],
     packages=find_packages(),
     include_package_data = True,
