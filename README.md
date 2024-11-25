@@ -27,3 +27,6 @@ The tools in this package are designed to work with structured datasets, such as
 ### Conclusion:
 This package is a modular and flexible solution for streamlining data science workflows. It provides data scientists and ML engineers with reusable tools to focus on solving domain-specific problems.
 
+## [0.1.1] - 2024-11-25
+### Added
+- Changes in loader function: upload files using filenames.

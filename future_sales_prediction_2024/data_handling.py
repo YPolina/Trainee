@@ -5,21 +5,25 @@ from sklearn.preprocessing import LabelEncoder
 from itertools import product
 from pandas.core.frame import DataFrame as df
 
-def loader(directory: str = "./competitive-data-science-predict-future-sales") -> df:
+def loader(file_name: str) -> df:
     """
     Data loader from .csv
 
     Parameters:
-    - directory: str - where are files are stored
+    - file_name: str - name of file
 
     Returns:
     data: pd.DataFrames - data from .csv file
+    or
+    FileNotFoundError - if file is not exists
     """
+    path = os.path.relpath(f'{file_name}')
+    try:
+        data = pd.read_csv(path)
+    except FileNotFoundError:
+        return 'Error: No such file'
+    return data
 
-    file_paths = os.listdir(directory)
-    dataframes = [pd.read_csv(os.path.join(directory, path)) for path in file_paths]
-    del dataframes[3]
-    return dataframes
 
 
 def prepare_full_data(items: df, categories: df, train: df, shops: df, test: df) -> df:
