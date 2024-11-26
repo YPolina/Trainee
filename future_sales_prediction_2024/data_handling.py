@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from itertools import product
 from pandas.core.frame import DataFrame as df
+import argparse
 
 def loader(file_name: str) -> df:
     """
@@ -188,8 +189,14 @@ def prepare_full_data(items: df, categories: df, train: df, shops: df, test: df)
     # Shop_id encoding
     full_data["shop_id"] = LabelEncoder().fit_transform(full_data["shop_id"])
 
-    return full_data, train
+    reduce_mem_usage(full_data)
+    reduce_mem_usage(train)
 
+    output_path = "local_storage/preprocessed_data/"
+    full_data.to_csv(f"{output_path}/full_data.csv", index=False)
+    train.to_csv(f"{output_path}/train.csv", index=False)
+
+    return None
 
 
 # Reducing memory usage
@@ -275,3 +282,23 @@ def full_data_creation(df: df, agg_group: list, periods: int) -> df:
     full_data = full_data.sort_values(by=agg_group)
 
     return full_data
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--items", required=True, help="Path to items.csv")
+    parser.add_argument("--categories", required=True, help="Path to item_categories.csv")
+    parser.add_argument("--train", required=True, help="Path to sales_train.csv")
+    parser.add_argument("--shops", required=True, help="Path to shops.csv")
+    parser.add_argument("--test", required=True, help="Path to test.csv")
+    args = parser.parse_args()
+
+    # Load data using the loader
+    items_df = loader(args.items)
+    categories_df = loader(args.categories)
+    train_df = loader(args.train)
+    shops_df = loader(args.shops)
+    test_df = loader(args.test)
+
+    # Prepare full data and train
+    prepare_full_data(items_df, categories_df, train_df, shops_df, test_df)

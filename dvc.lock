@@ -1,0 +1,61 @@
+schema: '2.0'
+stages:
+  data_handling:
+    cmd: "python future_sales_prediction_2024/data_handling.py --items local_storage/raw_data/items.csv
+      --categories local_storage/raw_data/item_categories.csv --train local_storage/raw_data/sales_train.csv
+      --shops local_storage/raw_data/shops.csv --test local_storage/raw_data/test.csv\n"
+    deps:
+    - path: future_sales_prediction_2024/data_handling.py
+      hash: md5
+      md5: 1a3041121e775c723f6aba10054bdd66
+      size: 10660
+    - path: local_storage/raw_data/item_categories.csv
+      hash: md5
+      md5: 05c62f1bed0c0655924fc62fe921fb56
+      size: 3573
+    - path: local_storage/raw_data/items.csv
+      hash: md5
+      md5: effd92430acdb03efca8542f7270e334
+      size: 1568417
+    - path: local_storage/raw_data/sales_train.csv
+      hash: md5
+      md5: bc7e53cc48549aba37d690093256facf
+      size: 94603866
+    - path: local_storage/raw_data/shops.csv
+      hash: md5
+      md5: beb40ce29c3db609a93b19ebbd1667b1
+      size: 2977
+    - path: local_storage/raw_data/test.csv
+      hash: md5
+      md5: aabf81b3af9a427e897aa77f77e8b971
+      size: 3182735
+    outs:
+    - path: local_storage/preprocessed_data/full_data.csv
+      hash: md5
+      md5: b80663837029c3ae0a857add80f4f5db
+      size: 373729598
+    - path: local_storage/preprocessed_data/train.csv
+      hash: md5
+      md5: 97d31edc538caa80ebc84193c896792f
+      size: 132826819
+  feature_extraction:
+    cmd: "python future_sales_prediction_2024/feature_extraction.py --full_data local_storage/preprocessed_data/full_data.csv
+      --train local_storage/preprocessed_data/train.csv\n"
+    deps:
+    - path: future_sales_prediction_2024/feature_extraction.py
+      hash: md5
+      md5: 226b59391407ba40723731f4f37320c3
+      size: 16438
+    - path: local_storage/preprocessed_data/full_data.csv
+      hash: md5
+      md5: b80663837029c3ae0a857add80f4f5db
+      size: 373729598
+    - path: local_storage/preprocessed_data/train.csv
+      hash: md5
+      md5: 97d31edc538caa80ebc84193c896792f
+      size: 132826819
+    outs:
+    - path: local_storage/preprocessed_data/full_featured_data.csv
+      hash: md5
+      md5: 42b18c7dfe6a6e750bb73407dfdef05d
+      size: 1894921517

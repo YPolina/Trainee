@@ -30,3 +30,8 @@ This package is a modular and flexible solution for streamlining data science wo
 ## [0.1.1] - 2024-11-25
 ### Added
 - Changes in loader function: upload files using filenames.
+
+## [0.2.1] - 2024-11-26
+- Added support for Google Cloud Storage.
+- Improved deployment pipeline.
+- Bug fixes and performance improvements.

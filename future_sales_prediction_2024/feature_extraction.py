@@ -9,6 +9,14 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas.core.frame import DataFrame as df
+import argparse
+from data_handling import reduce_mem_usage
+
+def load_csv_data(full_data_path, train_path) -> df:
+    """Loads the necessary data from CSV files."""
+    full_data = pd.read_csv(full_data_path)
+    train = pd.read_csv(train_path)
+    return full_data, train
 
 class FeatureExtractor:
     def __init__(self, full_data: df, train: df):
@@ -324,7 +332,11 @@ class FeatureExtractor:
         # Fill NaNs
         self.full_data.fillna(0, inplace=True)
 
-        return self.full_data
+        reduce_mem_usage(self.full_data)
+        output_path = "local_storage/preprocessed_data/"
+        self.full_data.to_csv(f"{output_path}/full_featured_data.csv", index=False)
+
+        return None
 
 class FeatureImportanceLayer:
 
@@ -441,3 +453,20 @@ class FeatureImportanceLayer:
         plt.xlabel("Feature Importance")
         plt.ylabel("Feature")
         plt.show()
+        
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--full_data", required=True, help="Path to full_data.csv")
+    parser.add_argument("--train", required=True, help="Path to train.csv")
+    args = parser.parse_args()
+
+    # Load data
+    full_data, train = load_csv_data(args.full_data, args.train)
+
+    # Run feature extraction
+    extractor = FeatureExtractor(full_data=full_data, train=train)
+    extractor.process()
+
+
+    print("Feature extraction completed")

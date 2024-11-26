@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="future_sales_prediction_2024",
-    version="0.1.1",
+    version="0.2.1",
     description="A package for feature extraction, hyperopt, and validation schemas",
     long_description=long_description,
     long_description_content_type = "text/markdown",
@@ -35,7 +35,12 @@ setuptools.setup(
         "hyperopt",
         "shap",
         "matplotlib",
-        "seaborn"
+        "seaborn",
+        "dvc",
+        "dvc-gs",
+        "google-auth",
+        "google-auth-oauthlib",
+        "google-cloud-storage"
 
     ],
     packages=find_packages(),
