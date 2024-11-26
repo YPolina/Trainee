@@ -35,3 +35,6 @@ This package is a modular and flexible solution for streamlining data science wo
 - Added support for Google Cloud Storage.
 - Improved deployment pipeline.
 - Bug fixes and performance improvements.
+
+## [0.2.1] - 2024-11-27
+- Bug fixes.

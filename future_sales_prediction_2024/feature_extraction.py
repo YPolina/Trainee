@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas.core.frame import DataFrame as df
 import argparse
-from data_handling import reduce_mem_usage
+from future_sales_prediction_2024.data_handling import reduce_mem_usage
 
 def load_csv_data(full_data_path, train_path) -> df:
     """Loads the necessary data from CSV files."""
