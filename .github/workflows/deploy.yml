@@ -28,7 +28,7 @@ jobs:
       env:
         GCS_JSON_KEY: ${{ secrets.GCS_JSON_KEY }}
       run: |
-        echo "${{ secrets.GCS_JSON_KEY }}" > gcs-key.json
+        echo "${{ secrets.GCS_JSON_KEY }}" | tr -d '\r' > gcs-key.json
         export GOOGLE_APPLICATION_CREDENTIALS=gcs-key.json
         gcloud auth activate-service-account --key-file=gcs-key.json
 
