@@ -24,14 +24,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
 
-    - name: Authenticate with Google Cloud
+     - name: Authenticate with Google Cloud
       env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCS_JSON_KEY }}
+        GCS_JSON_KEY: ${{ secrets.GCS_JSON_KEY }}
       run: |
         echo "${{ secrets.GCS_JSON_KEY }}" > gcs-key.json
         export GOOGLE_APPLICATION_CREDENTIALS=gcs-key.json
         gcloud auth activate-service-account --key-file=gcs-key.json
-  
+
     
     - name: Build the package
       run: |
