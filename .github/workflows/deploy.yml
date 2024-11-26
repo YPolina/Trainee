@@ -22,24 +22,4 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel twine
-
-     - name: Authenticate with Google Cloud
-      env:
-        GCS_JSON_KEY: ${{ secrets.GCS_JSON_KEY }}
-      run: |
-        echo "${{ secrets.GCS_JSON_KEY }}" > gcs-key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=gcs-key.json
-        gcloud auth activate-service-account --key-file=gcs-key.json
-
-    
-    - name: Build the package
-      run: |
-        python setup.py sdist bdist_wheel
-
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        python -m twine upload dist/* --verbose
+        pip
