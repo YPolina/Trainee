@@ -1,0 +1,5 @@
+outs:
+- md5: bc7e53cc48549aba37d690093256facf
+  size: 94603866
+  hash: md5
+  path: sales_train.csv

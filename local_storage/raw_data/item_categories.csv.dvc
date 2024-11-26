@@ -1,0 +1,5 @@
+outs:
+- md5: 05c62f1bed0c0655924fc62fe921fb56
+  size: 3573
+  hash: md5
+  path: item_categories.csv

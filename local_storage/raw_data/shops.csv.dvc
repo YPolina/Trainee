@@ -1,0 +1,5 @@
+outs:
+- md5: beb40ce29c3db609a93b19ebbd1667b1
+  size: 2977
+  hash: md5
+  path: shops.csv
