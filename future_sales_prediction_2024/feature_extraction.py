@@ -10,13 +10,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas.core.frame import DataFrame as df
 import argparse
+import os
 from future_sales_prediction_2024.data_handling import reduce_mem_usage
+
 
 def load_csv_data(full_data_path, train_path) -> df:
     """Loads the necessary data from CSV files."""
     full_data = pd.read_csv(full_data_path)
     train = pd.read_csv(train_path)
     return full_data, train
+
 
 class FeatureExtractor:
     def __init__(self, full_data: df, train: df):
@@ -338,22 +341,39 @@ class FeatureExtractor:
 
         return None
 
+
 class FeatureImportanceLayer:
 
-    def __init__(self, X: df, y: df):
+    def __init__(self, X: df, y: df, output_dir: str = "feature_importance_results"):
         """
         Initialization of model
 
         Parameters:
         X: pd.DataFrame - feature matrix
         y: pd.DataFrame - target vector
+        output_dir: str - directory to save plots
         """
-
+        self.output_dir = output_dir
         self.X = X
         self.y = y
         self.baseline_model = None
         self.baseline_importance = None
         self.final_model_importance = None
+
+        # Create output directory if it doesn't exist
+        os.makedirs(self.output_dir, exist_ok=True)
+
+    def save_plot(self, fig: Figure, file_name: str) -> None:
+        """
+        Save the plot to the output directory
+
+        Parameters:
+        - fig: matplotlib.figure.Figure - plot to be saved
+        - file_name: str - name of the file (e.g., "baseline_importance.png")
+        """
+        file_path = os.path.join(self.output_dir, file_name)
+        fig.savefig(file_path, bbox_inches="tight")
+        print(f"Plot saved to {file_path}")
 
     def fit_baseline_model(
         self, n_estimators: int = 30, random_state: int = 42
@@ -375,15 +395,19 @@ class FeatureImportanceLayer:
 
         print("Baseline importances calculated")
 
-    def plot_baseline_importance(self, top_n: int = 30) -> Figure:
+    def plot_baseline_importance(
+        self, top_n: int = 30, file_name: str = "baseline_importance.png"
+    ) -> Figure:
         """
         Plot top n features for the baseline model
 
         Parameters:
-        - top_n: int - top n features from baseling_importances
+        - top_n: int - number of top features to plot
+        - file_name: str - name of the file to save the plot
 
         Returns:
         - Figure: plot of feature importances for baseline model
+
         """
         if self.baseline_importance is None:
             raise ValueError('Baseline model is not fitted. Run "fit_baselinemodel"')
@@ -391,13 +415,14 @@ class FeatureImportanceLayer:
         feature_importances = pd.Series(self.baseline_importance, index=self.X.columns)
         top_features = feature_importances.nlargest(top_n)
 
-        plt.figure(figsize=(10, 6))
-        sns.barplot(x=top_features, y=top_features.index)
-        plt.title(f"Top {top_n} feature importances for Random Forest Regressor")
-        plt.xlabel("Feature Importance")
-        plt.ylabel("Feature")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(x=top_features, y=top_features.index, ax=ax)
+        ax.set_title(f"Top {top_n} Feature Importances (Baseline Model)")
+        ax.set_xlabel("Feature Importance")
+        ax.set_ylabel("Feature")
 
-        plt.show()
+        self.save_plot(fig, file_name)
+        plt.close(fig)
 
     def fit_final_model(
         self, model=XGBRegressor(), params: Optional[dict] = None
@@ -429,12 +454,15 @@ class FeatureImportanceLayer:
         self.final_model_importance = model.feature_importances_
         print(f"{type(model).__name__} model fitted and feature importances calculated")
 
-    def plot_final_importance(self, top_n: int = 35) -> None:
+    def plot_final_importance(
+        self, top_n: int = 35, file_name: str = "final_model_importance.png"
+    ) -> None:
         """
         Plot the top_n feature importances for the final model
 
         Parameters:
         - top_n: int - top n features from final_model_importance
+        - file_name: str - name of the file to save the plot
 
         Returns:
         - Figure: plot of feature importances for the final model
@@ -447,13 +475,16 @@ class FeatureImportanceLayer:
         )
         top_features = feature_importances.nlargest(top_n)
 
-        plt.figure(figsize=(10, 8))
-        sns.barplot(x=top_features, y=top_features.index)
-        plt.title(f"Top {top_n} Importances for final model")
-        plt.xlabel("Feature Importance")
-        plt.ylabel("Feature")
-        plt.show()
-        
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.barplot(x=top_features, y=top_features.index, ax=ax)
+        ax.set_title(f"Top {top_n} Feature Importances (Final Model)")
+        ax.set_xlabel("Feature Importance")
+        ax.set_ylabel("Feature")
+
+        self.save_plot(fig, file_name)
+        plt.close(fig)
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -467,6 +498,5 @@ if __name__ == "__main__":
     # Run feature extraction
     extractor = FeatureExtractor(full_data=full_data, train=train)
     extractor.process()
-
 
     print("Feature extraction completed")

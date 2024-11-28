@@ -7,3 +7,11 @@
 - Added support for Google Cloud Storage.
 - Improved deployment pipeline.
 - Bug fixes and performance improvements.
+
+## [0.2.2] - 2024-11-27
+- Bug fixes
+
+## [0.2.3] - 2024-11-28
+- Enhanced Explainability and Error Analysis
+- Customizable Hyperparameter Tuning
+- FeatureImportanceLayer Enhancements

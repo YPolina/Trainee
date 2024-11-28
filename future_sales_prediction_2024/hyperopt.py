@@ -3,14 +3,22 @@ from xgboost import XGBRegressor
 from sklearn.metrics import root_mean_squared_error
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from pandas.core.frame import DataFrame as df
+import os
 
-def hyperparameter_tuning(X: df, y: np.ndarray) -> dict:
+
+def hyperparameter_tuning(
+    X: df, y: np.ndarray, model_class, param_space: dict, eval_fn, max_evals: int = 50
+) -> dict:
     """
     Perform hyperparameter tuning using Hyperopt for XGBoost
 
     Parameters:
     X: pd.DataFrame - feature matrix
     y: np.ndarray - target vector
+    model_class: callable - model class (e.g., XGBRegressor, RandomForestRegressor, etc.)
+    param_space: dict - Hyperopt search space for model hyperparameters
+    eval_fn: callable - evaluation function that returns a loss metric
+    max_evals: int - number of evaluations to perform (default=50)
 
     Returns:
     best_params: dict - selected parameters for XGBRegressor by Hyperopt
@@ -18,64 +26,29 @@ def hyperparameter_tuning(X: df, y: np.ndarray) -> dict:
     """
 
     def objective(params):
-        rmse_scores = []
-        model = XGBRegressor(early_stopping_rounds=20)
-        # Adjust parameters to model-specific format
+        """
+        Objective function for hyperparameter optimization
 
-        params = {
-            "objective": "reg:squarederror",
-            "eval_metric": "rmse",
-            "booster": "gbtree",
-            "eta": params["eta"],
-            "max_depth": int(params["max_depth"]),
-            "subsample": params["subsample"],
-            "colsample_bytree": params["colsample_bytree"],
-            "gamma": params["gamma"],
-            "min_child_weight": int(params["min_child_weight"]),
-            "lambda": params["lambda"],
-            "alpha": params["alpha"],
-        }
+        """
+        try:
+            model = model_class(**params)
+            loss = eval_fn(model, X, y)
+        except Exception as e:
+            # If the model fails, return a high loss
+            print(f"Error: {e}")
+            return {"loss": float("inf"), "status": STATUS_OK}
 
-        X_train = X[~X.date_block_num.isin([33])]
-        y_train = y.iloc[X_train.index]
-
-        X_val = X[X["date_block_num"] == 33]
-        y_val = y.iloc[X_val.index]
-        model.fit(X_train, y_train, eval_set=[(X_val, y_val)])
-        y_pred = np.round(model.predict(X_val).clip(0, 20), 2)
-
-        rmse = root_mean_squared_error(y_val, y_pred)
-
-        # Average RMSE across folds
-        return {"loss": rmse, "status": STATUS_OK}
-
-    # Hyperparameter search space
-    space = {
-        "eta": hp.uniform("eta", 0.01, 0.3),
-        "max_depth": hp.quniform("max_depth", 3, 10, 1),
-        "subsample": hp.uniform("subsample", 0.5, 1.0),
-        "colsample_bytree": hp.uniform("colsample_bytree", 0.5, 1.0),
-        "gamma": hp.uniform("gamma", 0, 5),
-        "min_child_weight": hp.quniform("min_child_weight", 50, 400, 25),
-        "lambda": hp.uniform("lambda", 0, 1),
-        "alpha": hp.uniform("alpha", 0, 1),
-    }
+        return {"loss": loss, "status": STATUS_OK}
 
     trials = Trials()
     best_params = fmin(
         fn=objective,
-        space=space,
+        space=param_space,
         algo=tpe.suggest,
-        max_evals=50,
+        max_evals=max_evals,
         trials=trials,
         rstate=np.random.default_rng(42),
     )
-
-    best_params["max_depth"] = int(best_params["max_depth"])
-    best_params["min_child_weight"] = int(best_params["min_child_weight"])
-    for key in best_params:
-        if isinstance(best_params[key], float):
-            best_params[key] = np.float16(best_params[key])
 
     print("Best parameters found:", best_params)
 
