@@ -36,7 +36,7 @@ This package is a modular and flexible solution for streamlining data science wo
 - Improved deployment pipeline.
 - Bug fixes and performance improvements.
 
-## [0.2.1] - 2024-11-27
+## [0.2.2] - 2024-11-27
 - Bug fixes.
 
 ## [0.2.3] - 2024-11-28
@@ -52,3 +52,6 @@ Users can now fully customize the hyperparameter tuning process:
     Plots for baseline and final model feature importances can now be saved directly to disk.
     Customizable output directory (output_dir) and file names.
     Plots overwrite existing files with the same name.
+
+## [0.2.4] - 2024-11-29
+- Bug fixes.

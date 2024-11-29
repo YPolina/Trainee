@@ -15,3 +15,6 @@
 - Enhanced Explainability and Error Analysis
 - Customizable Hyperparameter Tuning
 - FeatureImportanceLayer Enhancements
+
+## [0.2.4] - 2024-11-29
+- Bug fixes.

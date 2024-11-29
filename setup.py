@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="future_sales_prediction_2024",
-    version="0.2.3",
+    version="0.2.4",
     description="A package for feature extraction, hyperopt, and validation schemas",
     long_description=long_description,
     long_description_content_type = "text/markdown",
