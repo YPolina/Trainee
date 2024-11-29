@@ -31,7 +31,7 @@ jobs:
 
     - name: Configure DVC remote (Google Cloud)
       run: |
-        dvc remote add -d myremote gs://my-dvc-bucket_future_prections --verbose
+        dvc remote add -d myremote gs://my-dvc-bucket_future_prections -f
 
     - name: Pull DVC data
       run: |
