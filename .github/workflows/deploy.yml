@@ -31,8 +31,7 @@ jobs:
 
     - name: Configure DVC remote (Google Cloud)
       run: |
-        dvc remote add -d myremote gcs://my-dvc-bucket_future_prections
-        dvc remote modify myremote credentialpath $GOOGLE_APPLICATION_CREDENTIALS
+        dvc remote add -d myremote gs://my-dvc-bucket_future_prections
 
     - name: Pull DVC data
       run: |
