@@ -6,7 +6,7 @@ from .data_handling import (
 )
 from .explainability import Explainability, ErrorAnalysis
 from .feature_extraction import FeatureExtractor, FeatureImportanceLayer
-from .hyperopt import hyperparameter_tuning
+from .hyperparameters import hyperparameter_tuning
 from .validation import Validator
 from .model_training import tss_cv, data_split, train_predict
 import logging

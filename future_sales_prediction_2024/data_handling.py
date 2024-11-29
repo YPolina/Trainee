@@ -1,29 +1,25 @@
 import pandas as pd
-import os
+import gcsfs
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from itertools import product
 from pandas.core.frame import DataFrame as df
 import argparse
 
-def loader(file_name: str) -> df:
+
+def loader(gcs_path: str) -> df:
     """
-    Data loader from .csv
+    Load data from a Google Cloud Storage path
 
     Parameters:
-    - file_name: str - name of file
+    - gcs_path: str - Google Cloud Storage path
 
     Returns:
     data: pd.DataFrames - data from .csv file
-    or
-    FileNotFoundError - if file is not exists
     """
-    path = os.path.relpath(f'{file_name}')
-    try:
-        data = pd.read_csv(path)
-    except FileNotFoundError:
-        return 'Error: No such file'
-    return data
+    with fs.open(gcs_path) as f:
+        return pd.read_csv(f)
+    
 
 
 
@@ -192,11 +188,8 @@ def prepare_full_data(items: df, categories: df, train: df, shops: df, test: df)
     reduce_mem_usage(full_data)
     reduce_mem_usage(train)
 
-    output_path = "local_storage/preprocessed_data/"
-    full_data.to_csv(f"{output_path}/full_data.csv", index=False)
-    train.to_csv(f"{output_path}/train.csv", index=False)
 
-    return None
+    return full_data, train
 
 
 # Reducing memory usage
@@ -286,12 +279,15 @@ def full_data_creation(df: df, agg_group: list, periods: int) -> df:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--items", required=True, help="Path to items.csv")
-    parser.add_argument("--categories", required=True, help="Path to item_categories.csv")
-    parser.add_argument("--train", required=True, help="Path to sales_train.csv")
-    parser.add_argument("--shops", required=True, help="Path to shops.csv")
-    parser.add_argument("--test", required=True, help="Path to test.csv")
+    parser.add_argument("--items", required=True, help="Path to items.csv in GCS")
+    parser.add_argument("--categories", required=True, help="Path to item_categories.csv in GCS")
+    parser.add_argument("--train", required=True, help="Path to sales_train.csv in GCS")
+    parser.add_argument("--shops", required=True, help="Path to shops.csv in GCS")
+    parser.add_argument("--test", required=True, help="Path to test.csv in GCS")
+    parser.add_argument("--outdir", required=True, help="Path in GCS to save processed data")
     args = parser.parse_args()
+
+    fs = gcsfs.GCSFileSystem()
 
     # Load data using the loader
     items_df = loader(args.items)
@@ -301,4 +297,12 @@ if __name__ == "__main__":
     test_df = loader(args.test)
 
     # Prepare full data and train
-    prepare_full_data(items_df, categories_df, train_df, shops_df, test_df)
+    full_data, train = prepare_full_data(items_df, categories_df, train_df, shops_df, test_df)
+
+    with fs.open(f"{args.outdir}/full_data.csv", "w") as f:
+        full_data.to_csv(f, index=False)
+
+    with fs.open(f"{args.outdir}/train.csv", "w") as f:
+        train.to_csv(f, index=False)
+
+    print(f"Processed data saved to {args.outdir}")

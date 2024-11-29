@@ -28,7 +28,15 @@ jobs:
       uses: 'google-github-actions/auth@v0'
       with:
            credentials_json: '${{ secrets.GCS_JSON_KEY }}'
-      
+
+    - name: Configure DVC remote (Google Cloud)
+      run: |
+        dvc remote add -d myremote gcs://my-dvc-bucket_future_prections
+        dvc remote modify myremote credentialpath $GOOGLE_APPLICATION_CREDENTIALS
+
+    - name: Pull DVC data
+      run: |
+        dvc pull  
 
     - name: Build the package
       run: |
@@ -39,4 +47,4 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
       run: |
-        python -m twine upload dist/* --verbose
+        python -m twine upload dist/*

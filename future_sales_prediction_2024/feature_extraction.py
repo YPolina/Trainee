@@ -11,15 +11,22 @@ import seaborn as sns
 from pandas.core.frame import DataFrame as df
 import argparse
 import os
+import gcsfs
 from future_sales_prediction_2024.data_handling import reduce_mem_usage
 
 
-def load_csv_data(full_data_path, train_path) -> df:
-    """Loads the necessary data from CSV files."""
-    full_data = pd.read_csv(full_data_path)
-    train = pd.read_csv(train_path)
-    return full_data, train
+def loader(gcs_path: str) -> df:
+    """
+    Load data from a Google Cloud Storage path
 
+    Parameters:
+    - gcs_path: str - Google Cloud Storage path
+
+    Returns:
+    data: pd.DataFrames - data from .csv file
+    """
+    with fs.open(gcs_path) as f:
+        return pd.read_csv(f)
 
 class FeatureExtractor:
     def __init__(self, full_data: df, train: df):
@@ -64,7 +71,7 @@ class FeatureExtractor:
 
         Returns:
         - pd.DataFrame - DataFrame with the new aggregated feature.
-        """
+        """            
         temp = (
             df[df.item_cnt_month > 0]
             if new_col == "first_sales_date_block"
@@ -336,10 +343,8 @@ class FeatureExtractor:
         self.full_data.fillna(0, inplace=True)
 
         reduce_mem_usage(self.full_data)
-        output_path = "local_storage/preprocessed_data/"
-        self.full_data.to_csv(f"{output_path}/full_featured_data.csv", index=False)
 
-        return None
+        return self.full_data
 
 
 class FeatureImportanceLayer:
@@ -488,15 +493,22 @@ class FeatureImportanceLayer:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--full_data", required=True, help="Path to full_data.csv")
-    parser.add_argument("--train", required=True, help="Path to train.csv")
+    parser.add_argument("--full_data", required=True, help="Path to full_data.csv in GCS")
+    parser.add_argument("--train", required=True, help="Path to train.csv in GCS")
+    parser.add_argument("--outdir", required=True, help="Path in GCS to save processed data")
     args = parser.parse_args()
 
+    fs = gcsfs.GCSFileSystem()
+
     # Load data
-    full_data, train = load_csv_data(args.full_data, args.train)
+    full_data = loader(args.full_data)
+    train = loader(args.train)
 
     # Run feature extraction
     extractor = FeatureExtractor(full_data=full_data, train=train)
-    extractor.process()
+    full_featured_data = extractor.process()
 
-    print("Feature extraction completed")
+    with fs.open(f"{args.outdir}/full_featured_data.csv", "w") as f:
+        full_featured_data.to_csv(f, index=False)
+
+    print(f"Full featured data saved to {args.outdir}")
