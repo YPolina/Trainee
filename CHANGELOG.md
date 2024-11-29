@@ -20,4 +20,8 @@
 - Bug fixes.
 
 ## [1.2.4] - 2024-11-29
+- Cloud Storage Integration
+- The data_handling.py and feature_extraction.py scripts now support loading .csv files from GCS paths. Outputs are saved to a user-specified GCS directory via the --outdir parameter.
+
+## [1.2.5] - 2024-11-29
 - Bug fixes.

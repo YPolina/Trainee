@@ -33,6 +33,8 @@ setuptools.setup(
         "seaborn",
         "dvc",
         "dvc-gs",
+        "dvc[gs]",
+        "dvc[gcs]",
         "google-auth",
         "google-auth-oauthlib",
         "google-cloud-storage",

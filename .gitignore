@@ -1,8 +1,7 @@
 *.csv
+*.ipynb
 venv/
 __pycache__/
 competitive-data-science-predict-future-sales/
-modeling.ipynb
+local_storage/
 ds.log
-.neptune/
-.feature_importance_results/
