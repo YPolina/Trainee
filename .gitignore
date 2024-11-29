@@ -5,3 +5,7 @@ __pycache__/
 competitive-data-science-predict-future-sales/
 local_storage/
 ds.log
+dist/
+build/
+.cache
+.ipynb_checkpoints

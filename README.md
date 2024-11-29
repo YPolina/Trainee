@@ -63,3 +63,5 @@ Users can now fully customize the hyperparameter tuning process:
 ## [1.2.5] - 2024-11-29
 - Bug fixes.
 
+
+
