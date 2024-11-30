@@ -25,10 +25,11 @@ pip install future_sales_prediction_2024
 Before fetching data, authenticate with Google Cloud:
 
 Option A: Use Google Cloud SDK: gcloud auth application-default login
+
 Option B: Use a Service Account key file: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
 
-* Step 2: Fetch Preprocessed Data
-Run the following command to download the preprocessed data using DVC: future-sales-prediction pull-data
+* Step 2: Pull the Data
+python pull_data.py --target data --repo https://github.com/YPolina/Trainee/future_sales_prediction_2024.git --branch DS-4.1
 This command:
 
 - Configures DVC to use the correct Google Cloud bucket.
@@ -166,6 +167,16 @@ Users can now fully customize the hyperparameter tuning process:
 
 ## [2.2.7, 2.2.8] - 2024-11-29
 - Bug fixes.
+
+## [2.2.9] - 2024-11-30
+
+- The new pull_data.py module clones the repository containing .dvc metadata, fetches data from remote storage (Google Cloud), and saves it to a user-specified target directory.
+- The repository URL is fixed to simplify user interaction.
+- Improved Workflow:
+Users no longer need to manually set up DVC or manage .dvc files.
+Everything is handled automatically via a single command.
+Fixed Repository URL:
+The repository is pre-configured as https://github.com/YPolina/Trainee/future_sales_prediction_2024.git.
 
 
 

@@ -2,4 +2,6 @@ graft future_sales_prediction_2024
 include README.md
 include LICENSE
 include setup.py
+include *.dvc
+recursive-include data *.dvc
 global -exclude *.py[cod]
