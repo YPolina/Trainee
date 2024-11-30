@@ -16,7 +16,7 @@ class PostInstallCommand(install):
 
 setuptools.setup(
     name="future_sales_prediction_2024",
-    version="2.2.6",
+    version="2.2.7",
     description="A package for feature extraction, hyperopt, and validation schemas",
     long_description=long_description,
     long_description_content_type = "text/markdown",
@@ -47,7 +47,6 @@ setuptools.setup(
         "google-auth",
         "google-auth-oauthlib",
         "google-cloud-storage",
-        "argparse",
         "gcsfs"
     ],
     packages=find_packages(),
