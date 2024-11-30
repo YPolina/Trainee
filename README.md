@@ -29,11 +29,19 @@ Option A: Use Google Cloud SDK: gcloud auth application-default login
 Option B: Use a Service Account key file: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
 
 * Step 2: Pull the Data
-python pull_data.py --target data --repo https://github.com/YPolina/Trainee/future_sales_prediction_2024.git --branch DS-4.1
-This command:
+Step 2: Pull the Data
+Option A - locally:Use the pull_data.py script to clone the repository, fetch DVC-tracked data, and save it to the current directory:
 
-- Configures DVC to use the correct Google Cloud bucket.
-- Fetches all required datasets into the local environment.
+python pull_data.py --repo https://github.com/YPolina/Trainee.git --branch DS-4.1
+
+Option B - using online-service(Google Colab, Kaggle and etc.)
+* !!python pull_data.py --repo https://github.com/YPolina/Trainee.git --branch DS-4.1
+
+This will:
+
+Clone the repository.
+Pull datasets tracked via DVC from Google Cloud Storage.
+Save datasets in a folder called data_pulled in the current working directory.
 
 * Step 3: Explore the Codebase and Build Models
 After fetching the data, you can explore and use the following modules:
@@ -178,7 +186,7 @@ Everything is handled automatically via a single command.
 Fixed Repository URL:
 The repository is pre-configured as https://github.com/YPolina/Trainee/future_sales_prediction_2024.git.
 
-## [2.2.10] - 2024-11-30
+## [2.2.10, 2.2.11] - 2024-11-30
 - Bug fixes.
 
 
