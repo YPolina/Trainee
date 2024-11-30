@@ -1,0 +1,13 @@
+md5: baf2fe6669e8d987799717328002a90a
+frozen: true
+deps:
+- etag: 08caf887f9ab818a031001
+  size: 94603866
+  version_id: '1732876481723466'
+  hash: md5
+  path: gs://my-dvc-bucket_future_prections/raw_data/sales_train.csv
+outs:
+- md5: bc7e53cc48549aba37d690093256facf
+  size: 94603866
+  hash: md5
+  path: sales_train.csv

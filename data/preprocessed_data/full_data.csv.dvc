@@ -1,0 +1,13 @@
+md5: 28aa2022b4a0be0d7993c7c62896ddb1
+frozen: true
+deps:
+- etag: 08cc8187b8fd818a031001
+  size: 384855586
+  version_id: '1732898357100748'
+  hash: md5
+  path: gs://my-dvc-bucket_future_prections/preprocessed_data/full_data.csv
+outs:
+- md5: dada30bf39982bcc915a13ce40bdd54e
+  size: 384855586
+  hash: md5
+  path: full_data.csv

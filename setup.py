@@ -1,13 +1,21 @@
 import setuptools
 from setuptools import setup, find_packages
+import subprocess
 
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+
+class PostInstallCommand(install):
+    """Post-installation for installation mode"""
+    def run(self):
+        install.run(self)  # Run the standard install process
+        subprocess.call(['python', '-m', 'future_sales_prediction_2024.run_post_install']) 
+
 setuptools.setup(
     name="future_sales_prediction_2024",
-    version="1.2.6",
+    version="2.2.6",
     description="A package for feature extraction, hyperopt, and validation schemas",
     long_description=long_description,
     long_description_content_type = "text/markdown",
@@ -38,9 +46,13 @@ setuptools.setup(
         "google-auth",
         "google-auth-oauthlib",
         "google-cloud-storage",
-        "argparse"
+        "argparse",
+        "gcsfs"
     ],
     packages=find_packages(),
     include_package_data = True,
+    cmdclass={
+        'install': PostInstallCommand,
+    },
     keywords="machine-learning xgboost hyperopt data-science regression",
 )

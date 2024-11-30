@@ -14,10 +14,18 @@ This project provides a Python package,future_sales_prediction_2024, to simplify
 
 ### Technologies
 * Python
-* Pandas, jupyter
+* Pandas, numpy, scikit-learn
+* dvc, gcloud
 
-### Data Sources:
-The tools in this package are designed to work with structured datasets, such as CSV files. For example, it can handle datasets used in machine learning competitions like Kaggle or any tabular data source.
+
+## Features
+- Automatically fetches raw and preprocessed data from Google Cloud Storage after installation.
+- Data Version Control integration. To use this tool run in the terminal:
+    git clone -b DS-4.1 https://github.com/YPolina/Trainee.git
+    cd /{path}/Trainee
+    dvc init
+    dvc pull
+- Provides an easy interface for working with datasets for sales forecasting.
 
 ### Challenges:
 * Complexity in Generalization: Making the tools generic enough to work with diverse datasets while maintaining simplicity.
@@ -60,8 +68,11 @@ Users can now fully customize the hyperparameter tuning process:
 - Cloud Storage Integration
 - The data_handling.py and feature_extraction.py scripts now support loading .csv files from GCS paths. Outputs are saved to a user-specified GCS directory via the --outdir parameter.
 
-## [1.2.5] - 2024-11-29
+## [1.2.5, 1.2.6] - 2024-11-29
 - Bug fixes.
+
+## [2.2.6] - 2024-11-29
+- Automatically fetches raw and preprocessed data from Google Cloud Storage after installation.
 
 
 
