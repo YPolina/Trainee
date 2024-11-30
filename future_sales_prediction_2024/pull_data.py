@@ -10,7 +10,7 @@ def main():
     parser.add_argument("--branch", type=str, default="main", help="Branch to pull from (default: main)")
     args = parser.parse_args()
 
-    pull_data(args.repo, args.target, args.branch)
+    pull_data(args.target, args.repo, args.branch)
 
 
 def pull_data(

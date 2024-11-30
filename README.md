@@ -178,5 +178,8 @@ Everything is handled automatically via a single command.
 Fixed Repository URL:
 The repository is pre-configured as https://github.com/YPolina/Trainee/future_sales_prediction_2024.git.
 
+## [2.2.10] - 2024-11-30
+- Bug fixes.
+
 
 
