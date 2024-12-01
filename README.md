@@ -30,12 +30,14 @@ Option B: Use a Service Account key file: export GOOGLE_APPLICATION_CREDENTIALS=
 
 * Step 2: Pull the Data
 Step 2: Pull the Data
-Option A - locally:Use the pull_data.py script to clone the repository, fetch DVC-tracked data, and save it to the current directory:
 
-python pull_data.py --repo https://github.com/YPolina/Trainee.git --branch DS-4.1
+Option A - locally:
+- Use the pull_data.py script to clone the repository, fetch DVC-tracked data, and save it to the current directory:
+
+* pull_data --repo https://github.com/YPolina/Trainee.git --branch DS-4.1
 
 Option B - using online-service(Google Colab, Kaggle and etc.)
-* !!python pull_data.py --repo https://github.com/YPolina/Trainee.git --branch DS-4.1
+* !pull_data --repo https://github.com/YPolina/Trainee.git --branch DS-4.1
 
 This will:
 
@@ -188,6 +190,10 @@ The repository is pre-configured as https://github.com/YPolina/Trainee/future_sa
 
 ## [2.2.10, 2.2.11] - 2024-11-30
 - Bug fixes.
+
+## [2.3.11] - 2024-12-01
+- Handle PermissionError by changing file permissions and retrying
+- Remove all non-CSV files from the target directory
 
 
 
