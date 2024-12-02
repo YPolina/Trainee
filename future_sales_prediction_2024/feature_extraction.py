@@ -1,6 +1,7 @@
 import pandas as pd
 from pandas.core.frame import DataFrame as df
 import numpy as np
+import shap
 from typing import Optional, Union
 from xgboost import XGBRegressor
 from sklearn.ensemble import RandomForestRegressor
@@ -27,6 +28,7 @@ def loader(gcs_path: str) -> df:
     """
     with fs.open(gcs_path) as f:
         return pd.read_csv(f)
+
 
 class FeatureExtractor:
     def __init__(self, full_data: df, train: df):
@@ -71,7 +73,7 @@ class FeatureExtractor:
 
         Returns:
         - pd.DataFrame - DataFrame with the new aggregated feature.
-        """            
+        """
         temp = (
             df[df.item_cnt_month > 0]
             if new_col == "first_sales_date_block"
@@ -400,102 +402,132 @@ class FeatureImportanceLayer:
 
         print("Baseline importances calculated")
 
-    def plot_baseline_importance(
-        self, top_n: int = 30, file_name: str = "baseline_importance.png"
-    ) -> Figure:
+    def fit_final_model(
+        self, model=XGBRegressor, params: Optional[dict] = None, use_shap: bool = False
+    ) -> None:
         """
-        Plot top n features for the baseline model
+        Fit a final model with specified hyperparameters and calculate feature importances
 
         Parameters:
-        - top_n: int - number of top features to plot
-        - file_name: str - name of the file to save the plot
+        - model: Any ML model with .feature_importances_ or .coef_ attribute
+        - params: Model hyperparameters
+        - use_shap: Use SHAP values if the model doesn't provide native feature importance
+        """
+        model = model or XGBRegressor()
+        print(f"Fitting {type(model).__name__}")
+        model.set_params(**(params or {}))
+
+        # Train, validation split
+        if hasattr(model, "fit"):
+            if isinstance(model, XGBRegressor):
+                X_train = self.X[~self.X.date_block_num.isin([33])]
+                y_train = self.y.iloc[X_train.index]
+
+                X_val = self.X[self.X["date_block_num"] == 33]
+                y_val = self.y.iloc[X_val.index]
+                model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=True)
+            else:
+                model.fit(self.X, self.y)
+        else:
+            raise ValueError("The provided model does not have a fit method.")
+
+        self.final_model_importance = self._calculate_importances(model, use_shap)
+        print(f"{type(model).__name__} model fitted and feature importances calculated")
+
+    def _calculate_importances(self, model, use_shap: bool = False) -> np.ndarray:
+        """
+        Calculate feature importances for the given model
+
+        Parameters:
+        - model: Trained model
+        - use_shap: Whether to use SHAP values if native feature importances aren't available
 
         Returns:
-        - Figure: plot of feature importances for baseline model
-
+        - np.ndarray: Feature importance values
         """
-        if self.baseline_importance is None:
-            raise ValueError('Baseline model is not fitted. Run "fit_baselinemodel"')
+        if hasattr(model, "feature_importances_"):
+            return model.feature_importances_
+        # Use absolute value for linear models.
+        elif hasattr(model, "coef_"):
+            return np.abs(model.coef_)
+        # Aggregate SHAP values
+        elif use_shap:
+            explainer = shap.Explainer(model, self.X)
+            shap_values = explainer(self.X)
+            return np.abs(shap_values.values).mean(axis=0)
+        else:
+            raise ValueError(
+                "Model does not support feature importances or SHAP values"
+            )
 
-        feature_importances = pd.Series(self.baseline_importance, index=self.X.columns)
+    def plot_feature_importances(
+        self,
+        importance_values: np.ndarray,
+        top_n: int = 30,
+        file_name: str = "feature_importance.png",
+        title: str = "Feature Importances",
+    ) -> Figure:
+        """
+        Plot feature importances.
+
+        Parameters:
+        - importance_values: np.ndarray - feature importance values
+        - top_n: int - number of top features to plot
+        - file_name: str - name of the file to save the plot
+        - title: str - title of the plot
+
+        Returns:
+        - Figure: Matplotlib figure object
+        """
+        feature_importances = pd.Series(importance_values, index=self.X.columns)
         top_features = feature_importances.nlargest(top_n)
 
         fig, ax = plt.subplots(figsize=(10, 6))
         sns.barplot(x=top_features, y=top_features.index, ax=ax)
-        ax.set_title(f"Top {top_n} Feature Importances (Baseline Model)")
+        ax.set_title(title)
         ax.set_xlabel("Feature Importance")
         ax.set_ylabel("Feature")
 
         self.save_plot(fig, file_name)
         plt.close(fig)
 
-    def fit_final_model(
-        self, model=XGBRegressor(), params: Optional[dict] = None
+    def plot_baseline_importance(
+        self, top_n: int = 30, file_name: str = "baseline_importance.png"
     ) -> None:
-        """
-        Fit a final model with specified hyperparameters and calculate feature importances.
-
-        Parameters:
-        - model: XGBRegressor() as a default model
-        - params (dict): Model hyperparameters.
-
-        """
-        print(f"Fitting {type(model).__name__}")
-        model.set_params(**(params or {}))
-        # Train, validation split
-        if isinstance(model, XGBRegressor):
-            X_train = self.X[~self.X.date_block_num.isin([33])]
-            y_train = self.y.iloc[X_train.index]
-
-            X_val = self.X[self.X["date_block_num"] == 33]
-            y_val = self.y.iloc[X_val.index]
-
-            model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=True)
-        else:
-            model.fit(self.X, self.y)
-
-        model.fit(self.X, self.y)
-
-        self.final_model_importance = model.feature_importances_
-        print(f"{type(model).__name__} model fitted and feature importances calculated")
+        """Plot feature importances for the baseline model"""
+        if self.baseline_importance is None:
+            raise ValueError('Baseline model is not fitted. Run "fit_baseline_model"')
+        self.plot_feature_importances(
+            self.baseline_importance,
+            top_n,
+            file_name,
+            title="Baseline Model Feature Importances",
+        )
 
     def plot_final_importance(
-        self, top_n: int = 35, file_name: str = "final_model_importance.png"
+        self, top_n: int = 30, file_name: str = "final_model_importance.png"
     ) -> None:
-        """
-        Plot the top_n feature importances for the final model
-
-        Parameters:
-        - top_n: int - top n features from final_model_importance
-        - file_name: str - name of the file to save the plot
-
-        Returns:
-        - Figure: plot of feature importances for the final model
-        """
+        """Plot feature importances for the final model"""
         if self.final_model_importance is None:
-            raise ValueError('Final model not fitted. Run "fit_final_model"')
-
-        feature_importances = pd.Series(
-            self.final_model_importance, index=self.X.columns
+            raise ValueError('Final model is not fitted. Run "fit_final_model"')
+        self.plot_feature_importances(
+            self.final_model_importance,
+            top_n,
+            file_name,
+            title="Final Model Feature Importances",
         )
-        top_features = feature_importances.nlargest(top_n)
-
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.barplot(x=top_features, y=top_features.index, ax=ax)
-        ax.set_title(f"Top {top_n} Feature Importances (Final Model)")
-        ax.set_xlabel("Feature Importance")
-        ax.set_ylabel("Feature")
-
-        self.save_plot(fig, file_name)
-        plt.close(fig)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--full_data", required=True, help="Path to full_data.csv in GCS")
+    parser.add_argument(
+        "--full_data", required=True, help="Path to full_data.csv in GCS"
+    )
     parser.add_argument("--train", required=True, help="Path to train.csv in GCS")
-    parser.add_argument("--outdir", required=True, help="Path in GCS to save processed data")
+    parser.add_argument(
+        "--outdir", required=True, help="Path in GCS to save processed data"
+    )
     args = parser.parse_args()
 
     fs = gcsfs.GCSFileSystem()
