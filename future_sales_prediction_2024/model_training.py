@@ -50,8 +50,8 @@ def tss_cv(
         rmse.append(root_mean_squared_error(y_pred, y_val))
         print(f"RMSE for split {n+1}: {rmse[n]:.3f}")
         n += 1
-    print(f"Mean RMSE for all splits: {np.mean(rmse):.3f}")
-    return np.mean(rmse)
+    mean_rmse = np.round(np.mean(rmse),3)
+    print(f"Mean RMSE for all splits: {mean_rmse}")
 
     # Plots true versus predicted values to assess model performance visually
     if true_pred_plot:
@@ -72,6 +72,7 @@ def tss_cv(
         plt.xlabel("True Values")
         plt.ylabel("Predicted Values")
         plt.show()
+    return mean_rmse
 
 
 # Split begore model fitting (with eval_set)
