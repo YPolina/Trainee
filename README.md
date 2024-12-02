@@ -114,6 +114,7 @@ File: future_sales_prediction_2024/model_training.py
 
 tss_cv(df, n_splits, model, true_pred_plot=True)
 Performs time-series cross-validation and calculates RMSE.
+Returns Mean RMSE for all splits
 
 df: DataFrame with features and target variable.
 n_splits: Number of cross-validation splits.

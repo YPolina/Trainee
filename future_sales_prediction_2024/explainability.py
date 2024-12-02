@@ -69,7 +69,6 @@ class Explainability:
 
         shap_values_instance = self.explainer(instance)
         print("SHAP explanation for one instance")
-        shap.plots.waterfall(shap_values_instance[0], max_display=35)
         self.save_plot(lambda: shap.plots.waterfall(shap_values_instance[0]), file_name)
 
     def global_feature_importance(
@@ -86,7 +85,6 @@ class Explainability:
         """
 
         print("Global feature importance (SHAP values):")
-        shap.plots.bar(self.shap_values, max_display=35)
         self.save_plot(lambda: shap.plots.bar(self.shap_values), file_name)
 
     def feature_dependence(
@@ -108,7 +106,6 @@ class Explainability:
             file_name = f"{feature_name}_dependence.png"
 
         print(f"Generating SHAP dependence plot for {feature_name}:")
-        shap.plots.scatter(self.shap_values[:, feature_name], color=self.shap_values)
         self.save_plot(
             lambda: shap.plots.scatter(
                 self.shap_values[:, feature_name], color=self.shap_values

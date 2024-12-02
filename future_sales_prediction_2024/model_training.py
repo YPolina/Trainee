@@ -51,6 +51,7 @@ def tss_cv(
         print(f"RMSE for split {n+1}: {rmse[n]:.3f}")
         n += 1
     print(f"Mean RMSE for all splits: {np.mean(rmse):.3f}")
+    return np.mean(rmse)
 
     # Plots true versus predicted values to assess model performance visually
     if true_pred_plot:
