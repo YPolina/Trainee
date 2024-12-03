@@ -37,7 +37,13 @@ jobs:
 
     - name: Pull DVC data
       run: |
-        dvc pull  
+        dvc pull
+
+    - name: Check package contents
+        run: |
+          python setup.py check --metadata
+          python setup.py sdist
+          tar -tf dist/*.tar.gz | grep 'future_sales_prediction_2024/'  
 
     - name: Build the package
       run: |

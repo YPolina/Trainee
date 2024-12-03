@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="future_sales_prediction_2024",
-    version="2.4.13",
+    version="3.4.13",
     description="A package for feature extraction, hyperopt, and validation schemas",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -39,10 +39,13 @@ setuptools.setup(
         "google-auth",
         "google-cloud-storage",
         "gcsfs",
+        "fastapi",
+        "uvicorn"
     ],
     entry_points={
         "console_scripts": [
             "pull_data=future_sales_prediction_2024.pull_data:main",
+            "future_sales_api=future_sales_prediction.main:app"
         ],
     },
     packages=find_packages(),

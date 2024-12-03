@@ -48,7 +48,7 @@ def pull_data(
 
         # Move required files to target directory
         print("Moving data to target directory...")
-        for folder in ["data/preprocessed_data", "data/raw_data"]:
+        for folder in ["future_sales_prediciton_2024/data/preprocessed_data", "future_sales_prediciton_2024/data/raw_data"]:
             if os.path.exists(folder):
                 for file in os.listdir(folder):
                     source_path = os.path.join(folder, file)

@@ -1,0 +1,15 @@
+graft future_sales_prediction_2024
+include main.py
+include README.md
+include LICENSE
+include setup.py
+include ds_future_sales_2024.toml
+include *.dvc
+include dvc.yaml
+include dvc.lock
+recursive-include data *
+global-exclude *.py[cod]
+global-exclude __pycache__/
+global-exclude *.pyo
+global-exclude *.pyc
+global-exclude *.pyd
