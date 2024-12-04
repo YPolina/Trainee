@@ -40,12 +40,11 @@ setuptools.setup(
         "google-cloud-storage",
         "gcsfs",
         "fastapi",
-        "uvicorn"
+        "uvicorn",
     ],
     entry_points={
         "console_scripts": [
             "pull_data=future_sales_prediction_2024.pull_data:main",
-            "future_sales_api=future_sales_prediction.main:app"
         ],
     },
     packages=find_packages(),

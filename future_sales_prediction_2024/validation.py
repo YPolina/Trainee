@@ -167,4 +167,5 @@ class Validator(BaseEstimator, TransformerMixin):
         if self.check_duplicates:
             self._check_duplicates(X)
 
-        return f"Data is valid"
+
+        return f'Data is valid'

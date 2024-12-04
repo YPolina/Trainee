@@ -13,7 +13,7 @@ from pandas.core.frame import DataFrame as df
 import argparse
 import os
 import gcsfs
-from future_sales_prediction_2024.data_handling import reduce_mem_usage
+from future_sales_prediction_2024.data_handling import MemoryReducer
 
 
 def loader(gcs_path: str) -> df:
@@ -31,14 +31,16 @@ def loader(gcs_path: str) -> df:
 
 
 class FeatureExtractor:
-    def __init__(self, full_data: df, train: df):
+    def __init__(self, full_data: df, train: df, memory_reducer: MemoryReducer):
         """
         Initialize with an existing DataFrame (full_data) for feature extraction
 
         Parameters:
+        memory_reducer: Class - to reduce memory used by dataframe
         full_data: pd.DataFrame - Pre-existing full data containing required columns
         train: pd.DataFrame - Training data for aggregating revenue-based features
         """
+        self.memory_reducer = memory_reducer
         self.full_data = full_data
         self.train = train
 
@@ -344,14 +346,14 @@ class FeatureExtractor:
         # Fill NaNs
         self.full_data.fillna(0, inplace=True)
 
-        reduce_mem_usage(self.full_data)
+        self.memory_reducer.reduce(self.full_data)
 
         return self.full_data
 
 
 class FeatureImportanceLayer:
 
-    def __init__(self, X: df, y: df, output_dir: str = "feature_importance_results"):
+    def __init__(self, X: df, y: df, output_dir: str = "./attributes/feature_importance_results"):
         """
         Initialization of model
 
@@ -491,6 +493,8 @@ class FeatureImportanceLayer:
         self.save_plot(fig, file_name)
         plt.close(fig)
 
+        print(f'{file_name} is saved in {self.output_dir}')
+
     def plot_baseline_importance(
         self, top_n: int = 30, file_name: str = "baseline_importance.png"
     ) -> None:
@@ -537,7 +541,7 @@ if __name__ == "__main__":
     train = loader(args.train)
 
     # Run feature extraction
-    extractor = FeatureExtractor(full_data=full_data, train=train)
+    extractor = FeatureExtractor(full_data=full_data, train=train, memory_reducer = MemoryReducer)
     full_featured_data = extractor.process()
 
     with fs.open(f"{args.outdir}/full_featured_data.csv", "w") as f:

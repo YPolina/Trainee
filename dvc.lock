@@ -9,8 +9,8 @@ stages:
     deps:
     - path: future_sales_prediction_2024/data_handling.py
       hash: md5
-      md5: eb89c21f9cdef2d8d1b616f0f0bf106e
-      size: 10807
+      md5: 76f72cf7cb443da97d0ebf7782d85bea
+      size: 11159
     - path: gs://my-dvc-bucket_future_prections/raw_data/item_categories.csv
       hash: md5
       etag: 08fca9dbf3ab818a031001
@@ -39,14 +39,14 @@ stages:
     outs:
     - path: gs://my-dvc-bucket_future_prections/preprocessed_data/full_data.csv
       hash: md5
-      etag: 08cc8187b8fd818a031001
-      size: 384855586
-      version_id: '1732898357100748'
+      etag: 08a2f995f3808e8a031001
+      size: 384927448
+      version_id: '1733311603244194'
     - path: gs://my-dvc-bucket_future_prections/preprocessed_data/train.csv
       hash: md5
-      etag: 08e8b7ecc7fd818a031001
-      size: 135762613
-      version_id: '1732898390219752'
+      etag: 0893cced84818e8a031001
+      size: 135765036
+      version_id: '1733311640331795'
   feature_extraction:
     cmd: "python future_sales_prediction_2024/feature_extraction.py --full_data gs://my-dvc-bucket_future_prections/preprocessed_data/full_data.csv
       --train gs://my-dvc-bucket_future_prections/preprocessed_data/train.csv --outdir
@@ -54,21 +54,21 @@ stages:
     deps:
     - path: future_sales_prediction_2024/feature_extraction.py
       hash: md5
-      md5: 258a6ce070359be7ccda6a5a555900bb
-      size: 17797
+      md5: bc69da43e2e3a250b1e0ab830d1edeca
+      size: 19181
     - path: gs://my-dvc-bucket_future_prections/preprocessed_data/full_data.csv
       hash: md5
-      etag: 08cc8187b8fd818a031001
-      size: 384855586
-      version_id: '1732898357100748'
+      etag: 08a2f995f3808e8a031001
+      size: 384927448
+      version_id: '1733311603244194'
     - path: gs://my-dvc-bucket_future_prections/preprocessed_data/train.csv
       hash: md5
-      etag: 08e8b7ecc7fd818a031001
-      size: 135762613
-      version_id: '1732898390219752'
+      etag: 0893cced84818e8a031001
+      size: 135765036
+      version_id: '1733311640331795'
     outs:
     - path: gs://my-dvc-bucket_future_prections/preprocessed_data/full_featured_data.csv
       hash: md5
-      etag: 089fbfe2a582828a031001
-      size: 1906047505
-      version_id: '1732899660930975'
+      etag: 08f3defad5888e8a031001
+      size: 1906787351
+      version_id: '1733313689464691'

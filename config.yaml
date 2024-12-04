@@ -1,0 +1,34 @@
+models:
+  LightGBM:
+    param_space:
+      learning_rate: {type: "uniform", low: 0.1, high: 1}
+      max_depth: {type: "choice", options: [2, 3, 4, 5, 10, 20]}
+      min_child_weight: {type: "choice", options: [1, 2, 3, 4, 5]}
+      colsample_bytree: {type: "uniform", low: 0.4, high: 1}
+      subsample: {type: "uniform", low: 0.6, high: 1}
+      num_leaves: {type: "choice", options: [31, 63, 127]}
+      min_split_gain: {type: "uniform", low: 0, high: 1}
+      reg_alpha: {type: "uniform", low: 0, high: 1}
+      reg_lambda: {type: "uniform", low: 0, high: 1}
+      n_estimators: {type: "fixed", value: 50}
+  XGBRegressor:
+    param_space:
+      eta: {type: "uniform", low: 0.01, high: 0.3}
+      max_depth: {type: "randint", low: 3, high: 11}
+      subsample: {type: "uniform", low: 0.5, high: 1}
+      colsample_bytree: {type: "uniform", low: 0.5, high: 1}
+      gamma: {type: "uniform", low: 0, high: 5}
+      min_child_weight: {type: "randint", low: 1, high: 11}
+      lambda: {type: "uniform", low: 0, high: 1}
+      alpha: {type: "uniform", low: 0, high: 1}
+  RandomForestRegressor:
+    param_grid:
+      n_estimators: [25, 50, 100, 150]
+      max_features: ["sqrt", "log2", null]
+      max_depth: [3, 6, 9]
+      max_leaf_nodes: [3, 6, 9]
+  LinearRegression:
+    param_grid:
+      fit_intercept: [true, false]
+      normalize: [true, false]
+      n_jobs: [1, -1]

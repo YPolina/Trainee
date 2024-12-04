@@ -21,7 +21,7 @@ class Explainability:
     """
 
     def __init__(
-        self, model, X: np.ndarray, output_dir: str = "explainability_outputs"
+        self, model, X: np.ndarray, output_dir: str = "./attributes/explainability_outputs"
     ):
 
         self.model = model
@@ -121,7 +121,7 @@ class ErrorAnalysis:
         X: np.ndarray,
         y: np.ndarray,
         model=XGBRegressor(),
-        output_dir: str = "error_analysis_outputs",
+        output_dir: str = "./attributes/error_analysis_outputs",
     ):
         """
         Class initialization
