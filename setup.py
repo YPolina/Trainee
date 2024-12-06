@@ -41,12 +41,9 @@ setuptools.setup(
         "gcsfs",
         "fastapi",
         "uvicorn",
+        "apache-airflow[postgres]",
+        "postgres"
     ],
-    entry_points={
-        "console_scripts": [
-            "pull_data=future_sales_prediction_2024.pull_data:main",
-        ],
-    },
     packages=find_packages(),
     include_package_data=True,
     keywords="machine-learning xgboost hyperopt data-science regression",

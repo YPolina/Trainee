@@ -1,6 +1,4 @@
 [core]
     remote = myremote
-['remote "gcs_remote"']
-    url = gs://my-dvc-bucket_future_prections
 ['remote "myremote"']
     url = gs://my-dvc-bucket_future_prections

@@ -5,26 +5,9 @@ from sklearn.preprocessing import LabelEncoder
 from itertools import product
 from pandas.core.frame import DataFrame as df
 import argparse
-
-
-class DataLoader:
-    """Handles data loading from Google Cloud Storage"""
-
-    def __init__(self):
-        self.fs = gcsfs.GCSFileSystem()
-
-    def load(self, gcs_path: str) -> df:
-        """
-        Load data from a Google Cloud Storage path
-
-        Parameters:
-        - gcs_path: str - Google Cloud Storage path
-
-        Returns:
-        - data: pd.DataFrame - Data from the CSV file
-        """
-        with self.fs.open(gcs_path) as f:
-            return pd.read_csv(f)
+import yaml
+from pathlib import Path
+from future_sales_prediction_2024.data_loader import DataLoader
 
 
 # Reducing memory usage
@@ -240,13 +223,13 @@ class DataPreparer:
         )
 
         # Month and year features
-        group = full_data.groupby("date_block_num").agg({"item_cnt_month": "sum"})
-        group = group.reset_index()
-        group["date"] = pd.date_range(start="2013-01-01", periods=35, freq="ME")
-        group["month"] = group["date"].dt.month
-        group["year"] = group["date"].dt.year
-        group.drop(columns=["date", "item_cnt_month"], inplace=True)
-        full_data = full_data.merge(group, on="date_block_num", how="left")
+        date_group = full_data.groupby("date_block_num").agg({"item_cnt_month": "sum"})
+        date_group = date_group.reset_index()
+        date_group["date"] = pd.date_range(start="2013-01-01", periods=35, freq="ME")
+        date_group["month"] = date_group["date"].dt.month
+        date_group["year"] = date_group["date"].dt.year
+        date_group.drop(columns=["date", "item_cnt_month"], inplace=True)
+        full_data = full_data.merge(date_group, on="date_block_num", how="left")
 
         # Column selection
         work_columns = [
@@ -272,50 +255,395 @@ class DataPreparer:
         return full_data, train
 
 
+class FeatureExtractor:
+    def __init__(self, full_data: df, train: df, memory_reducer: MemoryReducer):
+        """
+        Initialize with an existing DataFrame (full_data) for feature extraction
+
+        Parameters:
+        memory_reducer: Class - to reduce memory used by dataframe
+        full_data: pd.DataFrame - Pre-existing full data containing required columns
+        train: pd.DataFrame - Training data for aggregating revenue-based features
+        """
+        self.memory_reducer = memory_reducer
+        self.full_data = full_data
+        self.train = train
+
+    def history_features(self, agg: list, new_feature: str) -> df:
+        """
+        Adds a feature counting the number of unique months for which each combination in `agg` has sales data.
+
+        Parameters:
+        - agg: list - List of columns to group by (e.g., ['shop_id', 'item_id']).
+        - new_feature: str - Name of the new feature to add.
+
+        Returns:
+        - pd.DataFrame - DataFrame with the additional feature based on historical sales counts.
+        """
+        group = (
+            self.full_data[self.full_data.item_cnt_month > 0]
+            .groupby(agg)["date_block_num"]
+            .nunique()
+            .rename(new_feature)
+            .reset_index()
+        )
+        self.full_data = self.full_data.merge(group, on=agg, how="left")
+
+    def feat_from_agg(self, df: df, agg: list, new_col: str, aggregation: list) -> df:
+        """
+        Aggregates features based on specified columns, aggregation functions, and adds the result as a new feature.
+
+        Parameters:
+        - agg: list - Columns to group by (e.g., ['shop_id', 'item_id']).
+        - new_col: str - Name for the new aggregated feature.
+        - aggregation: Dict[str, Union[str, List[str]]] - Aggregation functions to apply on the grouped data
+
+        Returns:
+        - pd.DataFrame - DataFrame with the new aggregated feature.
+        """
+        temp = (
+            df[df.item_cnt_month > 0]
+            if new_col == "first_sales_date_block"
+            else df.copy()
+        )
+        temp = temp.groupby(agg).agg(aggregation)
+        temp.columns = [new_col]
+        temp.reset_index(inplace=True)
+        self.full_data = pd.merge(self.full_data, temp, on=agg, how="left")
+
+        if new_col == "first_sales_date_block":
+            self.full_data.fillna(34, inplace=True)
+
+    def lag_features(self, col: str, lags: list) -> df:
+        """
+        Adds lagged features to the DataFrame for specified columns over defined lag periods.
+
+        Parameters:
+        - col: str - Column to create lags for.
+        - lags: list - List of lag periods to apply.
+
+        Returns:
+        - pd.DataFrame - DataFrame with the newly created lagged features.
+        """
+        temp = self.full_data[["date_block_num", "shop_id", "item_id", col]]
+        for lag in lags:
+            shifted = temp.copy()
+            shifted.columns = [
+                "date_block_num",
+                "shop_id",
+                "item_id",
+                f"{col}_lag_{lag}",
+            ]
+            shifted["date_block_num"] += lag
+            self.full_data = pd.merge(
+                self.full_data,
+                shifted,
+                on=["date_block_num", "shop_id", "item_id"],
+                how="left",
+            )
+
+    def new_items(self, agg: list, new_col: str) -> df:
+        """
+        Adds a feature tracking average monthly sales for items with specific historical conditions (e.g., item history of 1).
+
+        Parameters:
+        - agg: list - Columns to group by (e.g., ['shop_id', 'item_id']).
+        - new_col: str - Name for the new column.
+
+        Returns:
+        - pd.DataFrame - DataFrame with the new column based on items' sales history.
+        """
+
+        temp = (
+            self.full_data.query("item_history == 1")
+            .groupby(agg)["item_cnt_month"]
+            .mean()
+            .reset_index()
+            .rename(columns={"item_cnt_month": new_col})
+        )
+        self.full_data = self.full_data.merge(temp, on=agg, how="left")
+
+    def add_revenue_features(self):
+        """Add revenue-based features and lags
+
+        Returns:
+        - pd.DataFrame - DataFrame with revenue lags.
+        """
+        # Revenue-based aggregations
+        revenue_agg_list = [
+            (
+                self.train,
+                ["date_block_num", "item_category_id", "shop_id"],
+                "sales_per_category_per_shop",
+                {"revenue": "sum"},
+            ),
+            (
+                self.train,
+                ["date_block_num", "shop_id"],
+                "sales_per_shop",
+                {"revenue": "sum"},
+            ),
+            (
+                self.train,
+                ["date_block_num", "item_id"],
+                "sales_per_item",
+                {"revenue": "sum"},
+            ),
+        ]
+        for df, agg, new_col, aggregation in revenue_agg_list:
+            self.feat_from_agg(df, agg, new_col, aggregation)
+
+        # Lag features for revenue aggregations
+        revenue_lag_dict = {
+            "sales_per_category_per_shop": [1],
+            "sales_per_shop": [1],
+            "sales_per_item": [1],
+        }
+        for feature, lags in revenue_lag_dict.items():
+            self.lag_features(feature, lags)
+            self.full_data.drop(columns=[feature], inplace=True)
+
+    def add_item_price_features(self):
+        """Add item price-related features, including delta revenue
+
+        Returns:
+        - pd.DataFrame - DataFrame with item_price and revenue lags.
+        """
+        # Average sales per shop for delta revenue
+        self.feat_from_agg(
+            self.train, ["shop_id"], "avg_sales_per_shop", {"revenue": "mean"}
+        )
+        self.full_data["avg_sales_per_shop"] = self.full_data[
+            "avg_sales_per_shop"
+        ].astype(np.float32)
+        self.full_data["delta_revenue_lag_1"] = (
+            self.full_data["sales_per_shop_lag_1"]
+            - self.full_data["avg_sales_per_shop"]
+        ) / self.full_data["avg_sales_per_shop"]
+        self.full_data.drop(
+            columns=["avg_sales_per_shop", "sales_per_shop_lag_1"], inplace=True
+        )
+
+        # Average item price features
+        self.feat_from_agg(
+            self.train, ["item_id"], "item_avg_item_price", {"item_price": "mean"}
+        )
+        self.full_data["item_avg_item_price"] = self.full_data[
+            "item_avg_item_price"
+        ].astype(np.float16)
+
+        self.feat_from_agg(
+            self.train,
+            ["date_block_num", "item_id"],
+            "date_item_avg_item_price",
+            {"item_price": "mean"},
+        )
+        self.full_data["date_item_avg_item_price"] = self.full_data[
+            "date_item_avg_item_price"
+        ].astype(np.float16)
+
+        # Lag for item price feature and delta price calculation
+        self.lag_features("date_item_avg_item_price", [1])
+        self.full_data["delta_price_lag_1"] = (
+            self.full_data["date_item_avg_item_price_lag_1"]
+            - self.full_data["item_avg_item_price"]
+        ) / self.full_data["item_avg_item_price"]
+        self.full_data.drop(
+            columns=[
+                "item_avg_item_price",
+                "date_item_avg_item_price",
+                "date_item_avg_item_price_lag_1",
+            ],
+            inplace=True,
+        )
+
+    def process(self):
+        """Execute feature extraction on full_data
+
+        Returns:
+        - pd.DataFrame - full data with all features
+        """
+        # History features
+        history = [
+            ("shop_id", "shop_history"),
+            ("item_id", "item_history"),
+            ("minor_category_id", "minor_category_history"),
+        ]
+        for group, new_feature in history:
+            self.history_features([group], new_feature)
+
+        # Features from aggregations
+        agg_list = [
+            (
+                self.full_data,
+                ["date_block_num", "item_category_id"],
+                "avg_item_cnt_per_cat",
+                {"item_cnt_month": "mean"},
+            ),
+            (
+                self.full_data,
+                ["date_block_num", "city_id", "shop_id"],
+                "avg_item_cnt_per_city_per_shop",
+                {"item_cnt_month": "mean"},
+            ),
+            (
+                self.full_data,
+                ["date_block_num", "shop_id"],
+                "avg_item_cnt_per_shop",
+                {"item_cnt_month": "mean"},
+            ),
+            (
+                self.full_data,
+                ["date_block_num", "item_category_id", "shop_id"],
+                "avg_item_cnt_per_cat_per_shop",
+                {"item_cnt_month": "mean"},
+            ),
+            (
+                self.full_data,
+                ["date_block_num", "item_id"],
+                "avg_item_cnt_per_item",
+                {"item_cnt_month": "mean"},
+            ),
+            (
+                self.full_data,
+                ["date_block_num", "item_category_id", "shop_id"],
+                "med_item_cnt_per_cat_per_shop",
+                {"item_cnt_month": "median"},
+            ),
+            (
+                self.full_data,
+                ["date_block_num", "main_category_id"],
+                "avg_item_cnt_per_main_cat",
+                {"item_cnt_month": "mean"},
+            ),
+            (
+                self.full_data,
+                ["date_block_num", "minor_category_id"],
+                "avg_item_cnt_per_minor_cat",
+                {"item_cnt_month": "mean"},
+            ),
+            (
+                self.full_data,
+                ["item_id"],
+                "first_sales_date_block",
+                {"item_cnt_month": "min"},
+            ),
+        ]
+        for df, agg, new_col, aggregation in agg_list:
+            self.feat_from_agg(df, agg, new_col, aggregation)
+
+        # Lagged features
+        lag_dict = {
+            "avg_item_cnt_per_cat": [1],
+            "avg_item_cnt_per_shop": [1, 3, 6],
+            "avg_item_cnt_per_item": [1, 3, 6],
+            "avg_item_cnt_per_city_per_shop": [1],
+            "avg_item_cnt_per_cat_per_shop": [1],
+            "med_item_cnt_per_cat_per_shop": [1],
+            "avg_item_cnt_per_main_cat": [1],
+            "avg_item_cnt_per_minor_cat": [1],
+            "item_cnt_month": [1, 2, 3, 6, 12],
+        }
+
+        for feature, lags in lag_dict.items():
+            self.lag_features(feature, lags)
+            if feature != "item_cnt_month":
+                self.full_data.drop(columns=[feature], inplace=True)
+
+        # Revenue and item price-related features
+        self.add_revenue_features()
+        self.add_item_price_features()
+
+        # Last sale and time since last sale features
+        self.full_data["last_sale"] = self.full_data.groupby(["shop_id", "item_id"])[
+            "date_block_num"
+        ].shift(1)
+        self.full_data["months_from_last_sale"] = (
+            self.full_data["date_block_num"] - self.full_data["last_sale"]
+        )
+        self.full_data["months_from_first_sale"] = self.full_data[
+            "date_block_num"
+        ] - self.full_data.groupby(["shop_id", "item_id"])["date_block_num"].transform(
+            "min"
+        )
+        self.full_data["months_from_last_sale"].fillna(-1, inplace=True)
+        self.full_data.drop("last_sale", axis=1, inplace=True)
+        # Fill NaNs
+        self.full_data.fillna(0, inplace=True)
+        self.memory_reducer.reduce(self.full_data)
+
+        return self.full_data
+
 class MainPipeline:
     """Orchestrates the entire data pipeline"""
 
-    def __init__(self):
-        self.loader = DataLoader()
+    def __init__(self, data_source="local", config_path="config.yaml"):
+        self.loader = DataLoader(data_source=data_source, config_path=config_path)
+        self.data_source = data_source
+        self.config = self.loader.config 
         self.memory_reducer = MemoryReducer()
         self.preparer = DataPreparer(self.memory_reducer)
 
-    def run(self, args):
+    def save_to_destination(self, df: pd.DataFrame, key: str):
+        """
+        Save a DataFrame either to GCS or locally, based on data_source
+
+        Parameters:
+        - df: pd.DataFrame - Data to save
+        - key: str - Key in config for the save path
+        """
+        if self.data_source == "gcs":
+            fs = gcsfs.GCSFileSystem()
+            gcs_path = self.config["gcs_paths"][key]
+            with fs.open(gcs_path, "w") as f:
+                df.to_csv(f, index=False)
+        elif self.data_source == "local":
+            local_path = Path(self.config["local_paths"][key])
+            local_path.parent.mkdir(parents=True, exist_ok=True) 
+            df.to_csv(local_path, index=False)
+        else:
+            raise ValueError(f"Invalid data source: {self.data_source}")
+
+    def run(self, test_file = None):
         # Load data
-        items = self.loader.load(args.items)
-        categories = self.loader.load(args.categories)
-        train = self.loader.load(args.train)
-        shops = self.loader.load(args.shops)
-        test = self.loader.load(args.test)
+        items = self.loader.load("items")
+        categories = self.loader.load("categories")
+        train = self.loader.load("sales_train")
+        shops = self.loader.load("shops")
+        if test_file:
+            try:
+                test = pd.read_csv(test_file)
+            except:
+                raise ValueError('You should place test data in .csv format in working directory')
+        else:
+            test = self.loader.load('test')
 
         # Prepare data
         full_data, train = self.preparer.prepare_full_data(
             items, categories, train, shops, test
         )
 
-        # Save outputs
-        fs = gcsfs.GCSFileSystem()
-        with fs.open(f"{args.outdir}/full_data.csv", "w") as f:
-            full_data.to_csv(f, index=False)
-        with fs.open(f"{args.outdir}/train.csv", "w") as f:
-            train.to_csv(f, index=False)
+        # Save full_data and train
+        self.save_to_destination(full_data, "full_data")
+        self.save_to_destination(train, "train")
 
-        print(f"Processed data saved to {args.outdir}")
+        # Run feature extraction
+        extractor = FeatureExtractor(
+            full_data=full_data, train=train, memory_reducer=self.memory_reducer
+        )
+        full_featured_data = extractor.process()
+
+        # Save extracted features
+        self.save_to_destination(full_featured_data, "full_featured_data")
+
+        print(f"Processed data saved to {self.data_source} destinations")
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--items", required=True, help="Path to items.csv in GCS")
-    parser.add_argument(
-        "--categories", required=True, help="Path to item_categories.csv in GCS"
-    )
-    parser.add_argument("--train", required=True, help="Path to sales_train.csv in GCS")
-    parser.add_argument("--shops", required=True, help="Path to shops.csv in GCS")
-    parser.add_argument("--test", required=True, help="Path to test.csv in GCS")
-    parser.add_argument(
-        "--outdir", required=True, help="Path in GCS to save processed data"
-    )
+    parser.add_argument("--data_source", required=True, help="Data source: 'local' or 'gcs'")
     args = parser.parse_args()
 
-    pipeline = MainPipeline()
-    pipeline.run(args)
+    pipeline = MainPipeline(data_source=args.data_source)
+    pipeline.run()

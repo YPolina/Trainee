@@ -23,19 +23,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
-        pip install dvc[gdrive,gs,gcs]
-        pip install dvc-gs
-
-    - name: Authenticate with Google Cloud
-      uses: 'google-github-actions/auth@v0'
-      with:
-           credentials_json: '${{ secrets.GCS_JSON_KEY }}'
-
-    - name: Configure DVC remote (Google Cloud)
-      run: |
-        dvc remote add -d myremote gs://my-dvc-bucket_future_prections
-        dvc pull
-
 
     - name: Build the package
       run: |

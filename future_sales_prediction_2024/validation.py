@@ -15,6 +15,7 @@ class Validator(BaseEstimator, TransformerMixin):
     Parameters:
     - column_types: Dict[str, str] - Expected data types for each column (e.g., {'shop_id': 'int64'})
     - value_ranges: Dict[str, Tuple[float, float]] - Expected numeric range for each column (e.g., {'month': (1, 12)})
+    - negative_columns: list - List of columns with accepted negative values
     - check_duplicates: bool - Whether to check for duplicate rows in the DataFrame (default=True)
     - check_missing: bool - Whether to check for missing values in the DataFrame (default=True)
     """
@@ -23,6 +24,7 @@ class Validator(BaseEstimator, TransformerMixin):
         self: TValidator,
         column_types: dict,
         value_ranges: dict,
+        negative_columns: list,
         check_duplicates: bool = True,
         check_missing: bool = True,
     ) -> None:
@@ -31,6 +33,8 @@ class Validator(BaseEstimator, TransformerMixin):
         self.column_types: dict = column_types
         # Expected value range for numeric columns {'month' : (1, 12)}
         self.value_ranges: dict = value_ranges
+        #Expected list with columns where negative values accepted
+        self.negative_columns: list = negative_columns
         # Whether to check duplicates in data
         self.check_duplicates: bool = check_duplicates
         # Whether to check missing values in data
@@ -96,7 +100,7 @@ class Validator(BaseEstimator, TransformerMixin):
         # Iteration along columns
         for column in X.columns:
             # Negative values detection
-            if (X[column] < 0).any():
+            if (X[column] < 0).any() and column not in self.negative_columns:
                 raise ValueError(f"Column {column} contains negative values")
 
     def _check_duplicates(self: TValidator, X: df) -> Exception | None:

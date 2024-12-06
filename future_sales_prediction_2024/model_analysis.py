@@ -3,10 +3,189 @@ from pandas.core.frame import DataFrame as df
 import numpy as np
 import shap
 import os
-import matplotlib.pyplot as plt
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error
 from xgboost import XGBRegressor
-from pandas.core.frame import DataFrame as df
+from typing import Optional, Union
+from xgboost import XGBRegressor
+from sklearn.ensemble import RandomForestRegressor
+from lightgbm import LGBMRegressor
+from sklearn.linear_model import LinearRegression
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import seaborn as sns
+import argparse
+
+
+class FeatureImportanceLayer:
+
+    def __init__(self, X: df, y: df, output_dir: str = "./artifacts/feature_importance_results"):
+        """
+        Initialization of model
+
+        Parameters:
+        X: pd.DataFrame - feature matrix
+        y: pd.DataFrame - target vector
+        output_dir: str - directory to save plots
+        """
+        self.output_dir = output_dir
+        self.X = X
+        self.y = y
+        self.baseline_model = None
+        self.baseline_importance = None
+        self.final_model_importance = None
+
+        # Create output directory if it doesn't exist
+        os.makedirs(self.output_dir, exist_ok=True)
+
+    def save_plot(self, fig: Figure, file_name: str) -> None:
+        """
+        Save the plot to the output directory
+
+        Parameters:
+        - fig: matplotlib.figure.Figure - plot to be saved
+        - file_name: str - name of the file (e.g., "baseline_importance.png")
+        """
+        file_path = os.path.join(self.output_dir, file_name)
+        fig.savefig(file_path, bbox_inches="tight")
+        print(f"Plot saved to {file_path}")
+
+    def fit_baseline_model(
+        self, n_estimators: int = 30, random_state: int = 42
+    ) -> None:
+        """
+        Fit Baseline RandomForestRegressor and calculate feature importances
+        """
+
+        print("Fitting Baseline Random Forest Regressor")
+        self.baseline_model = RandomForestRegressor(
+            n_estimators=n_estimators,
+            random_state=random_state,
+            verbose=2,
+            n_jobs=-1,
+            max_depth=15,
+        )
+        self.baseline_model.fit(self.X, self.y)
+        self.baseline_importance = self.baseline_model.feature_importances_
+
+        print("Baseline importances calculated")
+
+    def fit_final_model(
+        self, model=XGBRegressor, params: Optional[dict] = None, use_shap: bool = False
+    ) -> None:
+        """
+        Fit a final model with specified hyperparameters and calculate feature importances
+
+        Parameters:
+        - model: Any ML model with .feature_importances_ or .coef_ attribute
+        - params: Model hyperparameters
+        - use_shap: Use SHAP values if the model doesn't provide native feature importance
+        """
+        model = model or XGBRegressor()
+        print(f"Fitting {type(model).__name__}")
+        model.set_params(**(params or {}))
+
+        # Train, validation split
+        if hasattr(model, "fit"):
+            if isinstance(model, XGBRegressor):
+                X_train = self.X[~self.X.date_block_num.isin([33])]
+                y_train = self.y.iloc[X_train.index]
+
+                X_val = self.X[self.X["date_block_num"] == 33]
+                y_val = self.y.iloc[X_val.index]
+                model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=True)
+            else:
+                model.fit(self.X, self.y)
+        else:
+            raise ValueError("The provided model does not have a fit method.")
+
+        self.final_model_importance = self._calculate_importances(model, use_shap)
+        print(f"{type(model).__name__} model fitted and feature importances calculated")
+
+    def _calculate_importances(self, model, use_shap: bool = False) -> np.ndarray:
+        """
+        Calculate feature importances for the given model
+
+        Parameters:
+        - model: Trained model
+        - use_shap: Whether to use SHAP values if native feature importances aren't available
+
+        Returns:
+        - np.ndarray: Feature importance values
+        """
+        if hasattr(model, "feature_importances_"):
+            return model.feature_importances_
+        # Use absolute value for linear models.
+        elif hasattr(model, "coef_"):
+            return np.abs(model.coef_)
+        # Aggregate SHAP values
+        elif use_shap:
+            explainer = shap.Explainer(model, self.X)
+            shap_values = explainer(self.X)
+            return np.abs(shap_values.values).mean(axis=0)
+        else:
+            raise ValueError(
+                "Model does not support feature importances or SHAP values"
+            )
+
+    def plot_feature_importances(
+        self,
+        importance_values: np.ndarray,
+        top_n: int = 30,
+        file_name: str = "feature_importance.png",
+        title: str = "Feature Importances",
+    ) -> Figure:
+        """
+        Plot feature importances.
+
+        Parameters:
+        - importance_values: np.ndarray - feature importance values
+        - top_n: int - number of top features to plot
+        - file_name: str - name of the file to save the plot
+        - title: str - title of the plot
+
+        Returns:
+        - Figure: Matplotlib figure object
+        """
+        feature_importances = pd.Series(importance_values, index=self.X.columns)
+        top_features = feature_importances.nlargest(top_n)
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(x=top_features, y=top_features.index, ax=ax)
+        ax.set_title(title)
+        ax.set_xlabel("Feature Importance")
+        ax.set_ylabel("Feature")
+
+        self.save_plot(fig, file_name)
+        plt.close(fig)
+
+        print(f'{file_name} is saved in {self.output_dir}')
+
+    def plot_baseline_importance(
+        self, top_n: int = 30, file_name: str = "baseline_importance.png"
+    ) -> None:
+        """Plot feature importances for the baseline model"""
+        if self.baseline_importance is None:
+            raise ValueError('Baseline model is not fitted. Run "fit_baseline_model"')
+        self.plot_feature_importances(
+            self.baseline_importance,
+            top_n,
+            file_name,
+            title="Baseline Model Feature Importances",
+        )
+
+    def plot_final_importance(
+        self, top_n: int = 30, file_name: str = "final_model_importance.png"
+    ) -> None:
+        """Plot feature importances for the final model"""
+        if self.final_model_importance is None:
+            raise ValueError('Final model is not fitted. Run "fit_final_model"')
+        self.plot_feature_importances(
+            self.final_model_importance,
+            top_n,
+            file_name,
+            title="Final Model Feature Importances",
+        )
+
 
 
 class Explainability:
@@ -21,7 +200,7 @@ class Explainability:
     """
 
     def __init__(
-        self, model, X: np.ndarray, output_dir: str = "./attributes/explainability_outputs"
+        self, model, X: np.ndarray, output_dir: str = "./artifacts/explainability_outputs"
     ):
 
         self.model = model
@@ -121,7 +300,7 @@ class ErrorAnalysis:
         X: np.ndarray,
         y: np.ndarray,
         model=XGBRegressor(),
-        output_dir: str = "./attributes/error_analysis_outputs",
+        output_dir: str = "./artifacts/error_analysis_outputs",
     ):
         """
         Class initialization

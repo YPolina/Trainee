@@ -1,3 +1,54 @@
+repository:
+  url: "https://github.com/YPolina/Trainee.git"
+  branch: "DS-4.1"
+
+
+gcs_paths:
+  items: gs://my-dvc-bucket_future_prections/raw_data/items.csv
+  categories: gs://my-dvc-bucket_future_prections/raw_data/item_categories.csv
+  sales_train: gs://my-dvc-bucket_future_prections/raw_data/sales_train.csv
+  shops: gs://my-dvc-bucket_future_prections/raw_data/shops.csv
+  test: gs://my-dvc-bucket_future_prections/raw_data/test.csv
+  full_data: gs://my-dvc-bucket_future_prections/preprocessed_data/full_data.csv
+  full_featured_data: gs://my-dvc-bucket_future_prections/preprocessed_data/full_featured_data.csv
+  train: gs://my-dvc-bucket_future_prections/preprocessed_data/train.csv
+local_paths:
+  items: data/raw_data/items.csv
+  categories: data/raw_data/item_categories.csv
+  sales_train: data/raw_data/sales_train.csv
+  shops: data/raw_data/shops.csv
+  test: data/raw_data/test.csv
+  full_data: data/preprocessed_data/full_data.csv
+  full_featured_data: data/preprocessed_data/full_featured_data.csv
+  train: data/preprocessed_data/train.csv
+
+
+validation:
+
+  column_types:
+    date_block_num: int8
+    shop_id: int8
+    city_id: int8
+    item_id: int16
+    item_cnt_month: float16
+    item_category_id: int8
+    main_category_id: int8
+    minor_category_id: int8
+
+  values_ranges:
+    date_block_num: [0, 34]
+    shop_id: [0, 59]
+    item_id: [0, 22169]
+    item_cnt_month: [0, 669]
+    city_id: [0, 31]
+    item_category_id: [0, 83]
+    main_category_id: [0, 11]
+    minor_category_id: [0, 66]
+  check_duplicates: true
+  check_missing: true
+  negative_columns: ['months_from_last_sale', 'delta_revenue_lag_1', 'delta_price_lag_1']
+
+
 models:
   LightGBM:
     param_space:

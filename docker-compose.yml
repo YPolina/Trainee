@@ -1,0 +1,22 @@
+services:
+  airflow:
+    build:
+      context: ./opt/airflow
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/key.json:/opt/airflow/key.json
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__FERNET_KEY=7VWBZ-m27Jzr1dPWDnyHJFGVspYU9f3l1edF29GG7iA=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/key.json
+
+  fastapi:
+    build:
+      context: ./app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
