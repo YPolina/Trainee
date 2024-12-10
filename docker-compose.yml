@@ -5,11 +5,22 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/key.json:/opt/airflow/key.json
+      - ./opt/airflow/dags:/opt/airflow/dags
+      - ./airflow/airflow.cfg:/opt/airflow/airflow.cfg
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
+      - ./airflow/webserver_config.py:/opt/airflow/webserver_config.py
+      - ./opt/airflow/key.json:/opt/airflow/key.json
+      - ./scripts/entrypoint.sh:/scripts/entrypoint.sh
+      - .:/repository
+      - ./.dvc:/.dvc
+      - ./data:/data
     environment:
+      - AIRFLOW__WEBSERVER__WEB_SERVER_HOST=localhost
+      - AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8080
+      - AIRFLOW__WEBSERVER__AUTHENTICATE=False
       - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
-      - AIRFLOW__CORE__FERNET_KEY=7VWBZ-m27Jzr1dPWDnyHJFGVspYU9f3l1edF29GG7iA=
+      - AIRFLOW__CORE__FERNET_KEY=WCMMTzrgS85umXKQ
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/key.json
 
