@@ -215,5 +215,5 @@ with DAG('model_training_pipeline',
     )
 
     # Task dependencies
-    load_data_task >> validate_data_task >> data_split_task >> hyperparameter_tuning_task >> train_model_task
+    load_data_task >> validate_data_task >> data_split_task >> hyperparameter_tunning_task >> train_model_task
     train_model_task >> [feature_importance_layer_task, explainability_layer_task, error_analysis_layer_task]

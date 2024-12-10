@@ -14,8 +14,6 @@ from future_sales_prediction_2024 import (
     ErrorAnalysis,
 )
 
-conf = kwargs["dag_run"].conf
-
 def load_data(**kwargs):
     """
     Data Load for executing the pipeline.
@@ -24,6 +22,7 @@ def load_data(**kwargs):
     - new_test_data(bool): True - If True, the user will pass their own test set
     - test_file: Path to a file in .csv format if `new_test_data` is True
     """
+    conf = kwargs["dag_run"].conf
     test_data = conf.get("test_data", [])
     test_file_path = "./data/raw_data/test_new_data.csv"
     pd.DataFrame(test_data).to_csv(test_file_path, index=False)
@@ -140,4 +139,4 @@ with DAG('fastapi_training_pipeline',
     )
 
     # Task dependencies
-    load_data_task >> data_split_task >> hyperparameter_tuning_task >> train_model_task
+    load_data_task >> data_split_task >> hyperparameter_tunning_task >> train_model_task
