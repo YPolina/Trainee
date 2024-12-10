@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Union
 import requests
 import time
 
