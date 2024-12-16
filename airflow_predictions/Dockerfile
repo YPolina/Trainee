@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM apache/airflow:latest
 
 USER root
 
@@ -11,11 +11,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get update && apt-get install -y google-cloud-sdk \
     && apt-get clean
 
-WORKDIR /app
+USER airflow
 
-COPY app_requirements.txt /app_requirements.txt
+COPY airflow_requirements.txt /opt/airflow/airflow_requirements.txt
+RUN pip install --no-cache-dir -r /opt/airflow/airflow_requirements.txt
 
-
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r /app_requirements.txt
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+ENV AIRFLOW_HOME=/opt/airflow

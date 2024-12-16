@@ -18,17 +18,21 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+
 class Trainer:
-    def __init__(self, n_splits=3):
+    def __init__(self, n_splits=3, config_path = 'config.yaml'):
         """
         Initialize the Trainer class
         
         Parameters:
         - n_splits: Number of Time Series CV splits
+        - config_path: str - Path to the YAML configuration file.
 
         """
         self.n_splits = n_splits
         self.model = None
+        with open(config_path, "r") as file:
+            self.config = yaml.safe_load(file)
 
     def _get_model_class(self, model_name):
         """
@@ -127,13 +131,12 @@ class Trainer:
             rmse_score = root_mean_squared_error(y_pred_val, y_val)
 
         if save_model:  
-            # Create output directory if it doesn't exist
-            os.makedirs('artifacts/models', exist_ok=True)
 
             # Save the trained model
-            joblib.dump(self.model, "./artifacts/models/trained_model.pkl")
+            save_path = os.path.join(self.config['artifacts']['models'], 'trained_model.pkl')
+            joblib.dump(self.model, save_path)
 
-            print(f"trained_model.pkl saved in ./artifacts/models")
+            print(f"trained_model.pkl saved in {save_path}")
         print(X_test)
 
         # Make predictions
@@ -179,7 +182,7 @@ class HyperparameterTuner:
                 param_space[param] = details["value"]
         return param_space
 
-    def tune(self, X: df, y: np.ndarray, model_name: str = XGBRegressor, custom_params: dict = None, max_evals: int = 50):
+    def tune(self, X: df, y: np.ndarray, model_name: str = 'XGBRegressor', custom_params: dict = None, max_evals: int = 50):
         """
         Perform hyperparameter tuning.
 
@@ -235,15 +238,12 @@ class HyperparameterTuner:
 
         print("Best parameters are found:", best_params_converted)
 
-
-        # Create output directory if it doesn't exist
-        os.makedirs('./artifacts/params', exist_ok=True)
-
+        save_path = os.path.join(self.config['artifacts']['params'], 'best_params.json')
         # Save to file
-        with open("./artifacts/params/best_params.json", "w") as f:
+        with open(save_path, "w") as f:
             json.dump(best_params_converted, f)
 
-        print('Best params are saved in ./artifacts/params/best_params.json')
+        print(f'Best params are saved in {save_path}')
 
         return best_params_converted, model_name
 

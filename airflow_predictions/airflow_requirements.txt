@@ -1,0 +1,6 @@
+dvc[all]
+google-cloud-storage
+apache-airflow
+apache-airflow-providers-google
+apache-airflow-providers-docker
+future_sales_prediction_2024

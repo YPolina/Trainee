@@ -14,11 +14,14 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import seaborn as sns
 import argparse
+from future_sales_prediction_2024.data_loader import DataLoader
+
+loader = DataLoader()
 
 
 class FeatureImportanceLayer:
 
-    def __init__(self, X: df, y: df, output_dir: str = "./artifacts/feature_importance_results"):
+    def __init__(self, X: df, y: df, output_dir: str = loader.config['artifacts']['feature_importancy_layer']):
         """
         Initialization of model
 
@@ -34,8 +37,6 @@ class FeatureImportanceLayer:
         self.baseline_importance = None
         self.final_model_importance = None
 
-        # Create output directory if it doesn't exist
-        os.makedirs(self.output_dir, exist_ok=True)
 
     def save_plot(self, fig: Figure, file_name: str) -> None:
         """
@@ -200,7 +201,7 @@ class Explainability:
     """
 
     def __init__(
-        self, model, X: np.ndarray, output_dir: str = "./artifacts/explainability_outputs"
+        self, model, X: np.ndarray, output_dir: str = loader.config['artifacts']['explainability_layer']
     ):
 
         self.model = model
@@ -300,7 +301,7 @@ class ErrorAnalysis:
         X: np.ndarray,
         y: np.ndarray,
         model=XGBRegressor(),
-        output_dir: str = "./artifacts/error_analysis_outputs",
+        output_dir: str = loader.config['artifacts']['feature_importancy_layer']
     ):
         """
         Class initialization

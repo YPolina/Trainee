@@ -4,34 +4,38 @@ from pydantic import BaseModel, Field
 from typing import List, Union
 import requests
 import time
+import json
+import csv
+import pickle
+import pandas as pd
 
-AIRFLOW_BASE_URL = "http://airflow_webserver:8080/api/v1/dags"
-AIRFLOW_USERNAME = "admin"
-AIRFLOW_PASSWORD = "admin"
+from future_sales_prediction_2024 import (
+    MainPipeline,
+    MemoryReducer,
+    DataLoader,
+    Trainer,
+    FeatureImportanceLayer,
+    HyperparameterTuner,
+    Explainability,
+    ErrorAnalysis,
+)
+
 app = FastAPI()
 
-
 # Data validation schema
-class TestData(BaseModel):
+class PredictRequest(BaseModel):
     ID: int = Field(..., ge=0)
     shop_id: int = Field(..., ge=0, le=59)
     item_id: int = Field(..., ge=0, le=22169)
 
 
-class PredictRequest(BaseModel):
-    test_data: List[TestData]
-    model_name: str = Union["XGBRegressor", "RandomForestRegressor", "LinearRegression", "LightGBM"]
-
-
-
-
 class Prediction(BaseModel):
-    ID: int = Field(..., ge=0, description="The ID of the test sample, must be a non-negative integer")
-    prediction: float = Field(..., description="The predicted value for the given test sample")
-
+    ID: int
+    prediction: float
 
 class InferenceResponse(BaseModel):
     predictions: List[Prediction] = Field(..., description="A list of predictions, each containing an ID and a predicted value")
+
 
 
 @app.get("/")
@@ -39,73 +43,37 @@ async def read_root():
     return {"health_check": "OK", "model_version": 1}
 
 
+@app.post("/infer", response_model=InferenceResponse)
+async def run_inference(request: List[PredictRequest]):
 
-@app.post("/predict", response_model=InferenceResponse)
-async def predict(request: PredictRequest):
-    """
-    Predict endpoint that can optionally train a new model based on the specified model_name
+    if request is None:
+        raise HTTPException(status_code=400, detail="No inference request data found")
 
-    Parameters:
-    - request: PredictRequest - The input test data and specified model class for training a new model
+    pipeline = MainPipeline(config_path='/config.yaml')
+    '''
 
-    Returns:
-    - InferenceResponse with predictions
-    """
-    # Extract test data and model_name from the request
+    test_data = pd.DataFrame([item.dict() for item in request])
+    pipeline.save_to_destination(test_data, 'new_test')
+    test_path = pipeline.config["local_paths"]['new_test']
 
-    dag_id = "fastapi_training_pipeline"
-    url = f"{AIRFLOW_BASE_URL}/{dag_id}/dagRuns"
+    pipeline.run(test_file = test_path)
+    '''
 
-    payload = {
-        "conf": {
-            "test_data": [data.dict() for data in request.test_data],
-            "model_name": request.model_name,
-        }
-    }
+    full_featured_data = pipeline.loader.load('full_featured_data')
 
-    response = requests.post(
-        url, json=payload, auth=(AIRFLOW_USERNAME, AIRFLOW_PASSWORD)
+    trainer = Trainer()
+
+    with open("../artifacts/params/best_params.json", 'r') as file:
+        best_params = json.load(file)
+
+    X_train, y_train, X_test = trainer.split_data(full_featured_data)
+
+    y_pred, model, rmse = trainer.train_predict(
+        X_train, y_train, X_test, model_name='XGBRegressor', best_params = best_params
     )
 
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=response.status_code,
-            detail=f"Failed to trigger DAG {dag_id}. Response: {response.text}",
-        )
-
-    dag_run_id = response.json().get("dag_run_id")
-    if not dag_run_id:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to get DAG run ID from Airflow response",
-        )
-
-    dag_status_url = f"{AIRFLOW_BASE_URL}/{dag_id}/dagRuns/{dag_run_id}"
-    while True:
-        status_response = requests.get(dag_status_url, auth=(AIRFLOW_USERNAME, AIRFLOW_PASSWORD))
-        if status_response.status_code != 200:
-            raise HTTPException(
-                status_code=status_response.status_code,
-                detail="Failed to get DAG run status",
-            )
-
-        status = status_response.json().get("state")
-        if status == "success":
-            break
-        elif status == "failed":
-            raise HTTPException(status_code=500, detail="DAG run failed")
-
-        time.sleep(5)
-
-    predictions_file = "./data/predictions.json"
-    try:
-        with open(predictions_file, "r") as f:
-            predictions = json.load(f)
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="Predictions file not found")
-
-    return InferenceResponse(predictions=predictions)
-
+    predictions = [{"ID": int(data.ID[i]), "prediction": float(y_pred[i])} for i in range(len(y_pred))]
+    return {"predictions": predictions}
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)

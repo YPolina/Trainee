@@ -10,3 +10,5 @@ build/
 .cache
 .ipynb_checkpoints
 key.json
+artifacts/
+data/intermediates/

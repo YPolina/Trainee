@@ -1,33 +1,87 @@
 services:
-  airflow:
-    build:
-      context: ./opt/airflow
+  postgres:
+      image: postgres:13
+      environment:
+        POSTGRES_USER: airflow
+        POSTGRES_PASSWORD: airflow
+        POSTGRES_DB: airflow
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      
+
+  redis:
+    image: redis:6
+    
+
+  sleek-airflow:
+    image: sleek-airflow:latest
+    container_name: sleek-airflow
+    restart: always
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./airflow_predictions:/opt/airflow
+      - ./key.json:/key.json
+      - ./data:/data                               
+      - ./.dvc:/.dvc
+      - ./config.yaml:/config.yaml                            
+      - ./:/repository                                                  
     ports:
       - "8080:8080"
-    volumes:
-      - ./opt/airflow/dags:/opt/airflow/dags
-      - ./airflow/airflow.cfg:/opt/airflow/airflow.cfg
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/airflow.db:/opt/airflow/airflow.db
-      - ./airflow/webserver_config.py:/opt/airflow/webserver_config.py
-      - ./opt/airflow/key.json:/opt/airflow/key.json
-      - ./scripts/entrypoint.sh:/scripts/entrypoint.sh
-      - .:/repository
-      - ./.dvc:/.dvc
-      - ./data:/data
+    depends_on:
+    - postgres
+    - redis
+    command: webserver
+    deploy:
+      resources:
+        limits:
+          memory: "16g"
+          cpus: "5.0"
+
+
+  scheduler:
+    image: sleek-airflow:latest
+    restart: always
     environment:
-      - AIRFLOW__WEBSERVER__WEB_SERVER_HOST=localhost
-      - AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8080
-      - AIRFLOW__WEBSERVER__AUTHENTICATE=False
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
-      - AIRFLOW__CORE__FERNET_KEY=WCMMTzrgS85umXKQ
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/key.json
+    volumes:
+      - ./airflow_predictions:/opt/airflow  
+      - ./data:/data                               
+      - ./.dvc:/.dvc
+      - ./config.yaml:/config.yaml                            
+      - ./:/repository                             
+      - ./artifacts:/artifacts 
+    depends_on:
+    - postgres
+    - redis
+    command: scheduler
+    deploy:
+      resources:
+        limits:
+          memory: "16g"
+          cpus: "5.0"  
 
   fastapi:
-    build:
-      context: ./app
+    image: sleek-fastapi:latest
+    container_name: sleek-fastapi
+    restart: always
     ports:
-      - "8000:8000"
+    - "8000:8000"
     volumes:
-      - ./app:/app
+    - ./app:/app
+    - ./key.json:/key.json
+    - ./data:/data                               
+    - ./.dvc:/.dvc
+    - ./config.yaml:/config.yaml                            
+    - ./:/repository
+    - ./artifacts:/artifacts
+    - ./artifacts/params/best_params.json:/artifacts/params/best_params.json
+
+  
+volumes:
+  postgres_data:
+    

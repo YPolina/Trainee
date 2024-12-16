@@ -9,18 +9,34 @@ gcs_paths:
   sales_train: gs://my-dvc-bucket_future_prections/raw_data/sales_train.csv
   shops: gs://my-dvc-bucket_future_prections/raw_data/shops.csv
   test: gs://my-dvc-bucket_future_prections/raw_data/test.csv
+  new_test: gs://my-dvc-bucket_future_prections/raw_data/new_test.csv
   full_data: gs://my-dvc-bucket_future_prections/preprocessed_data/full_data.csv
   full_featured_data: gs://my-dvc-bucket_future_prections/preprocessed_data/full_featured_data.csv
   train: gs://my-dvc-bucket_future_prections/preprocessed_data/train.csv
 local_paths:
-  items: data/raw_data/items.csv
-  categories: data/raw_data/item_categories.csv
-  sales_train: data/raw_data/sales_train.csv
-  shops: data/raw_data/shops.csv
-  test: data/raw_data/test.csv
-  full_data: data/preprocessed_data/full_data.csv
-  full_featured_data: data/preprocessed_data/full_featured_data.csv
-  train: data/preprocessed_data/train.csv
+  items: /data/raw_data/items.csv
+  categories: /data/raw_data/item_categories.csv
+  sales_train: /data/raw_data/sales_train.csv
+  shops: /data/raw_data/shops.csv
+  test: /data/raw_data/test.csv
+  new_test: /data/raw_data/new_test.csv
+  full_data: /data/preprocessed_data/full_data.csv
+  full_featured_data: /data/preprocessed_data/full_featured_data.csv
+  train: /data/preprocessed_data/train.csv
+intermediates_parquet:
+  full_featured_data: /data/intermediates/full_featured_data.parquet
+  X_train: /data/intermediates/X_train.parquet
+  y_train: /data/intermediates/y_train.parquet
+  X_test: /data/intermediates/X_test.parquet
+
+
+artifacts:
+  params: /artifacts/params
+  models: /artifacts/models
+  error_analysis_layer: /artifacts/error_analysis_outputs
+  explainability_layer: /artifacts/explainability_outputs
+  feature_importancy_layer: /artifacts/feature_importancy_outputs
+
 
 
 validation:
